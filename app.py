@@ -189,44 +189,86 @@ def parse_nagad_standard(raw):
     return acc,rows
 
 def parse_bkash_nagad_business(raw):
-    hi,acc=-1,''
-    for i,row in enumerate(raw[:12]):
+    """
+    bKash Statement Parser (Business Agent OR Customer).
+    Direction logic:
+      - Sender == this account  → DEBIT  (account sent money out)
+      - Receiver == this account → CREDIT (account received money)
+      - Neither matches          → fallback heuristic
+    """
+    hi, acc = -1, ''
+    for i, row in enumerate(raw[:12]):
         for c in row:
-            if re.match(r'^01[0-9]{9}$',str(c).strip()): acc=str(c).strip()
-        rlow=' '.join(str(c) for c in row).lower()
+            m = re.match(r'^01[0-9]{9}$', str(c).strip())
+            if m: acc = str(c).strip()
+        rlow = ' '.join(str(c) for c in row).lower()
         if 'transaction id' in rlow and ('sender' in rlow or 'transaction type' in rlow):
-            hi=i; break
-    if hi<0: hi=4
-    H=[str(h).replace('\n',' ').strip().lower() for h in raw[hi]]
-    def c(kw): return next((i for i,h in enumerate(H) if kw in h),-1)
-    iDt=c('transaction date');iT=c('transaction id');iTy=c('transaction type')
-    iSn=c('sender');iRv=c('receiver');iA=c('transacted amount')
-    iCm=c('commission');iBl=c('balance')
+            hi = i; break
+    if hi < 0: hi = 4
 
-    rows=[]
+    H = [str(h).replace('\n', ' ').strip().lower() for h in raw[hi]]
+    def col(kw): return next((i for i, h in enumerate(H) if kw in h), -1)
+
+    iDt = col('transaction date'); iT  = col('transaction id')
+    iTy = col('transaction type'); iSn = col('sender')
+    iRv = col('receiver');         iA  = col('transacted amount')
+    iCm = col('commission');       iFe = col('fee')
+    iBl = col('balance')
+
+    acc_clean = re.sub(r'\s', '', acc)  # strip spaces for comparison
+
+    rows = []
     for row in raw[hi+1:]:
-        if not row or all(str(x).strip() in ('','nan','None') for x in row): continue
-        amt=_f(row[iA]) if iA>=0 else 0
-        if amt==0: continue
-        ty=str(row[iTy]).strip() if iTy>=0 else ''
-        sn=str(row[iSn]).strip() if iSn>=0 else ''
-        rv=str(row[iRv]).strip() if iRv>=0 else ''
-        cm=_f(row[iCm]) if iCm>=0 else 0
-        if 'cash out' in ty.lower(): dr,cp='credit',sn
-        elif 'cash in' in ty.lower(): dr,cp='debit',rv
-        else: dr,cp='credit',sn or rv
-        dt=_date(row[iDt] if iDt>=0 else '')
+        if not row or all(str(x).strip() in ('', 'nan', 'None') for x in row): continue
+        amt = _f(row[iA]) if iA >= 0 else 0
+        if amt == 0: continue
+
+        ty = str(row[iTy]).strip() if iTy >= 0 else ''
+
+        # Clean sender / receiver (remove spaces, strip)
+        sn = re.sub(r'\s', '', str(row[iSn]).strip()) if iSn >= 0 else ''
+        rv = re.sub(r'\s', '', str(row[iRv]).strip()) if iRv >= 0 else ''
+
+        # ── Direction: Sender/Receiver vs account ──────────────────────
+        if sn == acc_clean:
+            dr = 'debit'    # this account sent money
+            cp = rv if rv not in ('', 'nan', 'NaN', 'None') else ''
+        elif rv == acc_clean:
+            dr = 'credit'   # this account received money
+            cp = sn if sn not in ('', 'nan', 'NaN', 'None') else ''
+        else:
+            # Neither matches — last resort: check type keywords
+            ty_low = ty.lower()
+            if any(k in ty_low for k in ['cash out', 'payment', 'topup', 'bill pay',
+                                          'loan repay', 'subscribe', 'direct pay']):
+                dr, cp = 'debit', rv or sn
+            else:
+                dr, cp = 'credit', sn or rv
+
+        cm = _f(row[iCm]) if iCm >= 0 else 0
+        # Customer statements have Fee instead of Commission
+        if cm == 0 and iFe >= 0:
+            cm = _f(row[iFe])
+
+        dt = _date(row[iDt] if iDt >= 0 else '')
         rows.append({
-            'তারিখ':dt[:16],'TXN_ID':str(row[iT]).strip() if iT>=0 else '',
-            'ধরন':ty,'direction':dr,
-            'দিক':'গ্রহণ' if dr=='credit' else 'পাঠানো',
-            'পরিমাণ':amt,'ব্যালেন্স':_f(row[iBl]) if iBl>=0 else 0,
-            'চ্যানেল':'USSD' if 'ussd' in ty.lower() else 'API',
-            'কাউন্টারপার্ট':cp,'স্ট্যাটাস':'APPROVED',
-            'is_comm':False,'আকার':size_cat(amt),
-            'দিন':dt[:10],'মাস':dt[:7],'কমিশন':cm,
+            'তারিখ':       dt[:16],
+            'TXN_ID':       str(row[iT]).strip() if iT >= 0 else '',
+            'ধরন':          ty,
+            'direction':    dr,
+            'দিক':          'Credit (In)' if dr == 'credit' else 'Debit (Out)',
+            'পরিমাণ':       amt,
+            'ব্যালেন্স':    _f(row[iBl]) if iBl >= 0 else 0,
+            'চ্যানেল':      'USSD' if 'ussd' in ty.lower() else 'API',
+            'কাউন্টারপার্ট': cp,
+            'স্ট্যাটাস':   'APPROVED',
+            'is_comm':      False,
+            'আকার':         size_cat(amt),
+            'দিন':          dt[:10],
+            'মাস':          dt[:7],
+            'কমিশন':        cm,
         })
-    return acc,rows
+    return acc, rows
 
 
 # ════════════════════════════════════════════════════════════════════════════
