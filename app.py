@@ -250,9 +250,25 @@ def parse_bkash_nagad_business(raw):
         if cm == 0 and iFe >= 0:
             cm = _f(row[iFe])
 
-        dt = _date(row[iDt] if iDt >= 0 else '')
+        # ── Date: parse properly to handle AM/PM ──────────────────────
+        raw_dt = str(row[iDt]).strip() if iDt >= 0 else ''
+        try:
+            dt_obj = pd.to_datetime(raw_dt, errors='coerce', dayfirst=True)
+            if pd.isna(dt_obj):
+                date_s = raw_dt[:16] if raw_dt else ''
+                day_s  = ''
+                mon_s  = ''
+                hour   = -1
+            else:
+                date_s = dt_obj.strftime('%Y-%m-%d %H:%M')
+                day_s  = dt_obj.strftime('%Y-%m-%d')
+                mon_s  = dt_obj.strftime('%Y-%m')
+                hour   = dt_obj.hour
+        except:
+            date_s = raw_dt[:16]; day_s = ''; mon_s = ''; hour = -1
+
         rows.append({
-            'তারিখ':       dt[:16],
+            'তারিখ':       date_s,
             'TXN_ID':       str(row[iT]).strip() if iT >= 0 else '',
             'ধরন':          ty,
             'direction':    dr,
@@ -264,8 +280,9 @@ def parse_bkash_nagad_business(raw):
             'স্ট্যাটাস':   'APPROVED',
             'is_comm':      False,
             'আকার':         size_cat(amt),
-            'দিন':          dt[:10],
-            'মাস':          dt[:7],
+            'দিন':          day_s,
+            'মাস':          mon_s,
+            'hour':         hour,
             'কমিশন':        cm,
         })
     return acc, rows
