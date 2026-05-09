@@ -924,159 +924,353 @@ new Chart(document.getElementById('cSent'), {{
 # ════════════════════════════════════════════════════════════════════════════
 #  WORD REPORT GENERATOR
 # ════════════════════════════════════════════════════════════════════════════
-def build_docx(s, main, acc, provider, fmt, fname):
+def build_docx(s, main, acc, provider, fmt, fname, focus_num=''):
     if not DOCX_OK:
         return None
 
-    doc = Document()
-    ac_rgb = {
-        'nagad':  RGBColor(0xe8, 0x5d, 0x04),
-        'bkash':  RGBColor(0xe2, 0x13, 0x6e),
-        'rocket': RGBColor(0x7c, 0x3a, 0xed),
-    }.get(provider, RGBColor(0x6b, 0x7f, 0x99))
+    from docx.oxml.ns import qn
+    from docx.oxml   import OxmlElement
 
-    pname = {'nagad':'নগদ (Nagad)','bkash':'বিকাশ (bKash)','rocket':'রকেট (Rocket)'}.get(provider,'অজানা')
+    doc = Document()
+
+    # ── Accent color ──────────────────────────────────────────────────────
+    ac_hex = {
+        'nagad':  'E85D04',
+        'bkash':  'E2136E',
+        'rocket': '7C3AED',
+    }.get(provider, '6B7F99')
+
+    def hex_to_rgb(h):
+        return RGBColor(int(h[0:2],16), int(h[2:4],16), int(h[4:6],16))
+
+    ac_rgb = hex_to_rgb(ac_hex)
+
+    green  = RGBColor(0x00, 0x87, 0x5a)
+    red    = RGBColor(0xc0, 0x39, 0x2b)
+    amber  = RGBColor(0xb8, 0x6e, 0x00)
+    blue   = RGBColor(0x15, 0x57, 0xa0)
+    muted  = RGBColor(0x6b, 0x7f, 0x99)
+    dark   = RGBColor(0x1a, 0x23, 0x32)
+    white  = RGBColor(0xff, 0xff, 0xff)
+
+    pname = {'nagad':'Nagad','bkash':'bKash','rocket':'Rocket (DBBL)'}.get(provider,'Unknown')
     now   = datetime.now().strftime('%d %B %Y, %I:%M %p')
 
-    # ── Page margins ──
+    # ── Page setup ───────────────────────────────────────────────────────
     for sec in doc.sections:
-        sec.top_margin    = Cm(1.8)
-        sec.bottom_margin = Cm(1.8)
+        sec.top_margin    = Cm(1.5)
+        sec.bottom_margin = Cm(1.5)
         sec.left_margin   = Cm(2.0)
         sec.right_margin  = Cm(2.0)
 
-    def add_heading(text, level=1, color=None):
-        p = doc.add_heading('', level=level)
-        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run = p.add_run(text)
-        run.font.size  = Pt(18 if level==1 else 13 if level==2 else 11)
-        run.font.bold  = True
-        if color: run.font.color.rgb = color
-        return p
+    # ── Helper: shade a table cell ────────────────────────────────────────
+    def shade_cell(cell, hex_color):
+        tc   = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd  = OxmlElement('w:shd')
+        shd.set(qn('w:val'),   'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'),  hex_color)
+        tcPr.append(shd)
 
-    def add_para(text, bold=False, size=11, color=None):
-        p = doc.add_paragraph()
-        run = p.add_run(text)
+    # ── Helper: set cell text with formatting ─────────────────────────────
+    def cell_text(cell, text, bold=False, size=9, color=None, align='LEFT'):
+        cell.text = ''
+        p   = cell.paragraphs[0]
+        p.alignment = {'LEFT': WD_ALIGN_PARAGRAPH.LEFT,
+                       'CENTER': WD_ALIGN_PARAGRAPH.CENTER,
+                       'RIGHT': WD_ALIGN_PARAGRAPH.RIGHT}.get(align, WD_ALIGN_PARAGRAPH.LEFT)
+        run = p.add_run(str(text))
         run.font.size = Pt(size)
         run.font.bold = bold
         if color: run.font.color.rgb = color
-        return p
 
-    def add_table(headers, data_rows, col_widths=None):
+    # ── Helper: add styled table ──────────────────────────────────────────
+    def add_table(headers, rows, col_w=None, hdr_color='1A2332'):
         t = doc.add_table(rows=1, cols=len(headers))
         t.style = 'Table Grid'
-        t.alignment = WD_TABLE_ALIGNMENT.CENTER
+        # Header row
         hrow = t.rows[0]
         for i, h in enumerate(headers):
-            cell = hrow.cells[i]
-            cell.text = h
-            cell.paragraphs[0].runs[0].font.bold  = True
-            cell.paragraphs[0].runs[0].font.size  = Pt(9)
-            cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(0x6b, 0x7f, 0x99)
-            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        for row_data in data_rows:
+            shade_cell(hrow.cells[i], hdr_color)
+            cell_text(hrow.cells[i], h, bold=True, size=9, color=white, align='CENTER')
+        # Data rows
+        for ri, row_data in enumerate(rows):
             row = t.add_row()
+            bg  = 'F8F9FB' if ri % 2 == 0 else 'FFFFFF'
             for i, val in enumerate(row_data):
-                row.cells[i].text = str(val)
-                row.cells[i].paragraphs[0].runs[0].font.size = Pt(9)
+                shade_cell(row.cells[i], bg)
+                cell_text(row.cells[i], val, size=9, color=dark)
+        # Column widths
+        if col_w:
+            for row in t.rows:
+                for i, cell in enumerate(row.cells):
+                    if i < len(col_w):
+                        cell.width = Cm(col_w[i])
         return t
 
-    # ── Title ──
-    add_heading(f"Mobile Financial System — Forensic Report", 1, ac_rgb)
-    add_para(f"প্রদানকারী: {pname}   |   অ্যাকাউন্ট: {acc or '—'}   |   তৈরি: {now}", size=10,
-             color=RGBColor(0x6b, 0x7f, 0x99))
-    add_para(f"ফাইল: {fname}   |   মেয়াদ: {s['start']} → {s['end']}   |   সক্রিয় দিন: {s['active']}", size=10,
-             color=RGBColor(0x6b, 0x7f, 0x99))
-    doc.add_paragraph()
+    # ── Helper: section heading ───────────────────────────────────────────
+    def section_heading(text):
+        p   = doc.add_paragraph()
+        run = p.add_run(text)
+        run.font.size  = Pt(12)
+        run.font.bold  = True
+        run.font.color.rgb = ac_rgb
+        # bottom border
+        pPr   = p._p.get_or_add_pPr()
+        pBdr  = OxmlElement('w:pBdr')
+        bottom = OxmlElement('w:bottom')
+        bottom.set(qn('w:val'),   'single')
+        bottom.set(qn('w:sz'),    '4')
+        bottom.set(qn('w:space'), '1')
+        bottom.set(qn('w:color'), ac_hex)
+        pBdr.append(bottom)
+        pPr.append(pBdr)
+        return p
 
-    # ── Summary ──
-    add_heading("সারসংক্ষেপ", 2, ac_rgb)
-    summary_text = (
-        f"এই {pname} অ্যাকাউন্টে {s['active']} দিনে মোট {s['total']:,}টি লেনদেন সম্পন্ন হয়েছে। "
-        f"মোট গ্রহণ ৳{s['cr_amt']:,.2f} ({s['cr_cnt']:,}টি), "
-        f"মোট পাঠানো ৳{s['db_amt']:,.2f} ({s['db_cnt']:,}টি)। "
-        f"কমিশন উপার্জন ৳{s['comm_amt']:,.2f}। "
-        f"গড় দৈনিক পরিমাণ ৳{s['avg_amt']:,.2f}। "
-        f"রাত্রিকালীন কার্যক্রম (রাত ১০–ভোর ২): {s['night_pct']}%।"
-    )
-    add_para(summary_text, size=11)
-    doc.add_paragraph()
+    def add_spacer():
+        doc.add_paragraph().paragraph_format.space_after = Pt(4)
 
-    # ── Key Metrics Table ──
-    add_heading("মূল পরিসংখ্যান", 2, ac_rgb)
+    # ── Helper: key-value info line ───────────────────────────────────────
+    def info_line(label, value, val_color=None):
+        p    = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(2)
+        run1 = p.add_run(f"{label}: ")
+        run1.font.size  = Pt(10)
+        run1.font.color.rgb = muted
+        run2 = p.add_run(str(value))
+        run2.font.size  = Pt(10)
+        run2.font.bold  = True
+        run2.font.color.rgb = val_color or dark
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  COVER HEADER (shaded box)
+    # ══════════════════════════════════════════════════════════════════════
+    # Title
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after  = Pt(6)
+    run = p.add_run('Mobile Financial System — Forensic Report')
+    run.font.size  = Pt(20)
+    run.font.bold  = True
+    run.font.color.rgb = ac_rgb
+
+    # Subtitle line
+    p2  = doc.add_paragraph()
+    p2.paragraph_format.space_after = Pt(10)
+    sub = p2.add_run(f'Provider: {pname}   |   Account: {acc or "—"}   |   Generated: {now}')
+    sub.font.size  = Pt(10)
+    sub.font.color.rgb = muted
+
+    # Info grid using a borderless table
+    info_t = doc.add_table(rows=2, cols=4)
+    info_t.style = 'Table Grid'
+    info_data = [
+        ('Start Date',    s['start'],       dark),
+        ('End Date',      s['end'],         dark),
+        ('Active Days',   str(s['active']), dark),
+        ('Night Activity',f"{s['night_pct']}%",
+         red if s['night_pct'] > 35 else amber),
+    ]
+    for i, (lbl, val, col) in enumerate(info_data):
+        shade_cell(info_t.rows[0].cells[i], 'F0F4F8')
+        shade_cell(info_t.rows[1].cells[i], 'FFFFFF')
+        cell_text(info_t.rows[0].cells[i], lbl,  bold=True, size=8, color=muted, align='CENTER')
+        cell_text(info_t.rows[1].cells[i], val,  bold=True, size=11, color=col,  align='CENTER')
+
+    add_spacer()
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  EXECUTIVE SUMMARY
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Executive Summary')
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(8)
+    p.add_run(
+        f'{pname} account {acc} recorded '
+    ).font.size = Pt(11)
+    run_bold = p.add_run(f'{s["total"]:,} transactions')
+    run_bold.font.bold = True
+    run_bold.font.size = Pt(11)
+    p.add_run(
+        f' over {s["active"]} active days ({s["start"]} to {s["end"]}). '
+        f'Daily average: BDT {s["avg_amt"]:,.2f}. '
+        f'Night-time activity (10PM–2AM): {s["night_pct"]}%.'
+        + (' WARNING: High night-time activity — requires investigation.' if s['night_pct'] > 35 else '')
+    ).font.size = Pt(11)
+    add_spacer()
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  KEY METRICS TABLE
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Key Financial Metrics')
     add_table(
-        ['বিষয়', 'পরিমাণ', 'সংখ্যা'],
+        ['Metric', 'Amount (BDT)', 'Count'],
         [
-            ['মোট লেনদেন', '—', f"{s['total']:,}টি"],
-            ['মোট গ্রহণ (Credit)', f"৳{s['cr_amt']:,.2f}", f"{s['cr_cnt']:,}টি"],
-            ['মোট পাঠানো (Debit)', f"৳{s['db_amt']:,.2f}", f"{s['db_cnt']:,}টি"],
-            ['কমিশন উপার্জন', f"৳{s['comm_amt']:,.2f}", f"{s['comm_cnt']:,}টি"],
-            ['গড় দৈনিক পরিমাণ', f"৳{s['avg_amt']:,.2f}", f"≈{s['avg_cnt']}টি/দিন"],
-            ['রাত্রিকালীন কার্যক্রম', f"{s['night_pct']}%", '(রাত ১০–ভোর ২)'],
-        ]
+            ['Total Transactions',      '—',                         f"{s['total']:,}"],
+            ['Total Credit (In)',       f"BDT {s['cr_amt']:,.2f}",  f"{s['cr_cnt']:,} txns"],
+            ['Total Debit (Out)',       f"BDT {s['db_amt']:,.2f}",  f"{s['db_cnt']:,} txns"],
+            ['Commission Earned',       f"BDT {s['comm_amt']:,.2f}",f"{s['comm_cnt']:,} entries"],
+            ['Daily Average Amount',    f"BDT {s['avg_amt']:,.2f}", f"≈{s['avg_cnt']} txns/day"],
+            ['Night Activity (10PM-2AM)',f"{s['night_pct']}%",      'Review if > 35%'],
+        ],
+        col_w=[5.5, 4.0, 3.5]
     )
-    doc.add_paragraph()
+    add_spacer()
 
-    # ── Monthly ──
-    add_heading("মাসিক বিশ্লেষণ", 2, ac_rgb)
+    # ══════════════════════════════════════════════════════════════════════
+    #  MONTHLY BREAKDOWN
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Monthly Transaction Breakdown')
     mo = main.groupby('মাস').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum')).reset_index()
     add_table(
-        ['মাস', 'লেনদেন সংখ্যা', 'মোট পরিমাণ (৳)'],
-        [[r['মাস'], f"{int(r['cnt']):,}", f"৳{r['amt']:,.2f}"] for _,r in mo.iterrows()]
+        ['Month', 'Transactions', 'Total Amount (BDT)'],
+        [[r['মাস'], f"{int(r['cnt']):,}", f"BDT {r['amt']:,.2f}"] for _,r in mo.iterrows()],
+        col_w=[4.5, 3.5, 5.0]
     )
-    doc.add_paragraph()
+    add_spacer()
 
-    # ── Size Breakdown ──
-    add_heading("লেনদেনের আকার বিভাজন", 2, ac_rgb)
+    # ══════════════════════════════════════════════════════════════════════
+    #  SIZE BREAKDOWN
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Transaction Size Breakdown')
     sz = main.groupby('আকার').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum')).reset_index()
     add_table(
-        ['আকার', 'সংখ্যা', 'মোট পরিমাণ (৳)'],
-        [[r['আকার'], f"{int(r['cnt']):,}", f"৳{r['amt']:,.2f}"] for _,r in sz.iterrows()]
+        ['Size Category', 'Count', 'Total Amount (BDT)'],
+        [[r['আকার'], f"{int(r['cnt']):,}", f"BDT {r['amt']:,.2f}"] for _,r in sz.iterrows()],
+        col_w=[5.5, 3.0, 4.5]
     )
-    doc.add_paragraph()
+    add_spacer()
 
-    # ── Type Breakdown ──
-    add_heading("লেনদেনের ধরন", 2, ac_rgb)
+    # ══════════════════════════════════════════════════════════════════════
+    #  TRANSACTION TYPE BREAKDOWN
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Transaction Type Breakdown')
     tp = main.groupby('ধরন').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum'))\
              .sort_values('amt', ascending=False).head(8).reset_index()
     add_table(
-        ['ধরন', 'সংখ্যা', 'মোট পরিমাণ (৳)'],
-        [[r['ধরন'][:35], f"{int(r['cnt']):,}", f"৳{r['amt']:,.2f}"] for _,r in tp.iterrows()]
+        ['Transaction Type', 'Count', 'Total Amount (BDT)'],
+        [[r['ধরন'][:40], f"{int(r['cnt']):,}", f"BDT {r['amt']:,.2f}"] for _,r in tp.iterrows()],
+        col_w=[7.0, 2.5, 3.5]
     )
-    doc.add_paragraph()
+    add_spacer()
 
-    # ── Top Counterparts ──
-    add_heading("শীর্ষ ১০ কাউন্টারপার্ট অ্যাকাউন্ট", 2, ac_rgb)
-    cp = main[~main['কাউন্টারপার্ট'].isin(['SYSTEM','','nan','None'])]
-    top_cp = cp.groupby('কাউন্টারপার্ট').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum'))\
-               .sort_values('amt', ascending=False).head(10).reset_index()
+    # ══════════════════════════════════════════════════════════════════════
+    #  TOP 10 RECEIVED FROM (Credit)
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Top 10 Numbers — Money Received From (Credit)')
+    cp_df = main[~main['কাউন্টারপার্ট'].isin(['SYSTEM','','nan','None','NaN'])]
+    top_recv = cp_df[cp_df['direction']=='credit']\
+                 .groupby('কাউন্টারপার্ট').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum'))\
+                 .sort_values('amt', ascending=False).head(10).reset_index()
     add_table(
-        ['#', 'অ্যাকাউন্ট নম্বর', 'লেনদেন সংখ্যা', 'মোট পরিমাণ (৳)'],
-        [[i+1, r['কাউন্টারপার্ট'], f"{int(r['cnt']):,}", f"৳{r['amt']:,.2f}"]
-         for i,(_,r) in enumerate(top_cp.iterrows())]
+        ['#', 'Account Number', 'Transactions', 'Total Received (BDT)'],
+        [[i+1, r['কাউন্টারপার্ট'], f"{int(r['cnt']):,}", f"BDT {r['amt']:,.2f}"]
+         for i,(_,r) in enumerate(top_recv.iterrows())],
+        col_w=[1.0, 5.0, 3.0, 4.0]
     )
-    doc.add_paragraph()
+    add_spacer()
 
-    # ── Top Days ──
-    add_heading("শীর্ষ ১০ ব্যস্ত দিন", 2, ac_rgb)
+    # ══════════════════════════════════════════════════════════════════════
+    #  TOP 10 SENT TO (Debit)
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Top 10 Numbers — Money Sent To (Debit)')
+    top_sent = cp_df[cp_df['direction']=='debit']\
+                 .groupby('কাউন্টারপার্ট').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum'))\
+                 .sort_values('amt', ascending=False).head(10).reset_index()
+    add_table(
+        ['#', 'Account Number', 'Transactions', 'Total Sent (BDT)'],
+        [[i+1, r['কাউন্টারপার্ট'], f"{int(r['cnt']):,}", f"BDT {r['amt']:,.2f}"]
+         for i,(_,r) in enumerate(top_sent.iterrows())],
+        col_w=[1.0, 5.0, 3.0, 4.0]
+    )
+    add_spacer()
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  TOP 10 OVERALL COUNTERPARTS
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Top 10 Counterpart Accounts (All Directions)')
+    top_all = cp_df.groupby('কাউন্টারপার্ট').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum'))\
+                .sort_values('amt', ascending=False).head(10).reset_index()
+    add_table(
+        ['#', 'Account Number', 'Transactions', 'Total Amount (BDT)'],
+        [[i+1, r['কাউন্টারপার্ট'], f"{int(r['cnt']):,}", f"BDT {r['amt']:,.2f}"]
+         for i,(_,r) in enumerate(top_all.iterrows())],
+        col_w=[1.0, 5.0, 3.0, 4.0]
+    )
+    add_spacer()
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  TOP 10 BUSIEST DAYS
+    # ══════════════════════════════════════════════════════════════════════
+    section_heading('Top 10 Busiest Days')
     td = main.groupby('দিন').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum'))\
              .sort_values('amt', ascending=False).head(10).reset_index()
     add_table(
-        ['#', 'তারিখ', 'লেনদেন সংখ্যা', 'মোট পরিমাণ (৳)'],
-        [[i+1, r['দিন'], f"{int(r['cnt']):,}", f"৳{r['amt']:,.2f}"]
-         for i,(_,r) in enumerate(td.iterrows())]
+        ['#', 'Date', 'Transactions', 'Total Amount (BDT)'],
+        [[i+1, r['দিন'], f"{int(r['cnt']):,}", f"BDT {r['amt']:,.2f}"]
+         for i,(_,r) in enumerate(td.iterrows())],
+        col_w=[1.0, 4.0, 3.0, 5.0]
     )
-    doc.add_paragraph()
 
-    # ── Transaction List (first 500) ──
-    add_heading("লেনদেনের বিস্তারিত তালিকা (প্রথম ৫০০টি)", 2, ac_rgb)
-    show = main[['তারিখ','TXN_ID','ধরন','দিক','পরিমাণ','আকার','চ্যানেল','কাউন্টারপার্ট']].head(500)
-    add_table(
-        ['SL','তারিখ','TXN ID','ধরন','দিক','পরিমাণ','আকার','চ্যানেল','কাউন্টারপার্ট'],
-        [[i+1, r['তারিখ'], r['TXN_ID'], r['ধরন'][:20], r['দিক'],
-          f"৳{r['পরিমাণ']:,.2f}", r['আকার'], r['চ্যানেল'], r['কাউন্টারপার্ট']]
-         for i,(_,r) in enumerate(show.iterrows())]
-    )
+    # ══════════════════════════════════════════════════════════════════════
+    #  PHONE NUMBER FOCUS (only if provided)
+    # ══════════════════════════════════════════════════════════════════════
+    if focus_num:
+        add_spacer()
+        f_df = main[main['কাউন্টারপার্ট'].astype(str).str.contains(focus_num, na=False, regex=False)]
+        section_heading(f'Number Focus Analysis — {focus_num}')
+        if f_df.empty:
+            p = doc.add_paragraph()
+            p.add_run(f'No transactions found involving {focus_num}.').font.color.rgb = red
+        else:
+            fcr = f_df[f_df['direction']=='credit']
+            fdb = f_df[f_df['direction']=='debit']
+            net = fcr['পরিমাণ'].sum() - fdb['পরিমাণ'].sum()
+
+            # Summary metrics
+            add_table(
+                ['Metric', 'Value'],
+                [
+                    ['Target Number',         focus_num],
+                    ['Total Transactions',     f"{len(f_df):,}"],
+                    ['Received From (Credit)', f"BDT {fcr['পরিমাণ'].sum():,.2f}  ({len(fcr)} txns)"],
+                    ['Sent To (Debit)',        f"BDT {fdb['পরিমাণ'].sum():,.2f}  ({len(fdb)} txns)"],
+                    ['Net Flow',               f"BDT {net:,.2f}"],
+                    ['First Transaction',      f_df['তারিখ'].min()],
+                    ['Last Transaction',       f_df['তারিখ'].max()],
+                ],
+                col_w=[5.5, 7.5]
+            )
+            add_spacer()
+
+            # All transactions with this number
+            doc.add_paragraph().add_run(
+                f'All {len(f_df):,} transactions involving {focus_num}:'
+            ).font.bold = True
+
+            cols_show = [c for c in ['তারিখ','TXN_ID','ধরন','direction','পরিমাণ','চ্যানেল'] if c in f_df.columns]
+            add_table(
+                ['#', 'Date', 'TXN ID', 'Type', 'Direction', 'Amount (BDT)', 'Channel'],
+                [[i+1,
+                  r.get('তারিখ',''),
+                  r.get('TXN_ID',''),
+                  str(r.get('ধরন',''))[:28],
+                  'Credit' if r.get('direction')=='credit' else 'Debit',
+                  f"BDT {r.get('পরিমাণ',0):,.2f}",
+                  r.get('চ্যানেল','')]
+                 for i,(_,r) in enumerate(f_df.iterrows())],
+                col_w=[0.8, 3.2, 3.0, 3.5, 1.8, 2.8, 2.0]
+            )
+
+    # ── Footer ──────────────────────────────────────────────────────────
+    add_spacer()
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(10)
+    run = p.add_run(f'Mobile Financial System Analyzer  |  {pname}  |  Account: {acc}  |  {now}')
+    run.font.size  = Pt(9)
+    run.font.color.rgb = muted
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     buf = io.BytesIO()
     doc.save(buf)
@@ -1615,7 +1809,7 @@ def main_app():
             mime="text/html", use_container_width=True)
     with dl2:
         if DOCX_OK:
-            ddata = build_docx(s, main, acc, provider, fmt_lbl, uploaded.name)
+            ddata = build_docx(s, main, acc, provider, fmt_lbl, uploaded.name, focus_num=focus_num)
             if ddata:
                 st.download_button("📝 Download Word Report",
                     data=ddata,
