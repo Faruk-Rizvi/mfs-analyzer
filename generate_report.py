@@ -34,7 +34,7 @@ def size_cat(a):
 # ══════════════════════════════════════════════════════════
 def detect(path: str):
     """Return (provider, format) from file path."""
-    p = path.lower()
+    p   = path.lower()
     ext = Path(path).suffix.lower()
 
     if ext == '.pdf':
@@ -49,26 +49,41 @@ def detect(path: str):
     except:
         return 'unknown', 'unknown'
 
-    flat  = ' '.join(str(c) for r in raw[:12] for c in r).lower()
-    hdrs  = ' '.join(str(c) for c in raw[0]).lower()
+    flat = ' '.join(str(c) for r in raw[:12] for c in r).lower()
+    hdrs = ' '.join(str(c) for c in raw[0]).lower()
 
+    # ── Nagad Standard (Agent/Individual) ──────────────────────────────
     if any(k in hdrs for k in ['txn_date_time', 'txn_type_dr_cr', 'available_blc_after_txn']):
         return 'nagad', 'nagad_standard'
 
+    # ── Nagad Account Statement header ────────────────────────────────
+    if 'nagad account statement' in flat:
+        return 'nagad', 'nagad_standard'
+
+    # ── Scan rows for header with Transaction ID + Sender/Receiver ────
     for i, row in enumerate(raw[:12]):
         rlow = ' '.join(str(c) for c in row).lower()
         if 'transaction id' in rlow and ('sender' in rlow or 'receiver' in rlow):
+            # Check TXN ID prefix in first data rows to confirm provider
             for dr in raw[i+1:i+6]:
                 txn = str(dr[1]).strip() if len(dr) > 1 else ''
-                if re.match(r'^DC', txn, re.I):       return 'bkash', 'bkash_business'
+                # bKash TXN IDs: DC..., DD..., alphanumeric 10 chars
+                if re.match(r'^D[A-Z0-9]{8,11}$', txn, re.I):
+                    return 'bkash', 'bkash_statement'
                 if re.match(r'^[0-9A-Z]{8,12}$', txn):
-                    if 'nagad' in flat:                return 'nagad', 'nagad_business'
-                    return 'bkash', 'bkash_business'
-            if 'nagad' in flat:                        return 'nagad', 'nagad_business'
-            return 'bkash', 'bkash_business'
+                    if 'nagad' in flat: return 'nagad', 'nagad_business'
+                    return 'bkash', 'bkash_statement'
+            # Header found but no TXN ID matched — check content clues
+            if 'nagad' in flat: return 'nagad', 'nagad_business'
+            if 'bkash' in flat or 'bikash' in flat: return 'bkash', 'bkash_statement'
+            # Statement for the Account header (both bKash types)
+            if 'statement for the account' in flat: return 'bkash', 'bkash_statement'
+            return 'bkash', 'bkash_statement'
 
-    if 'nagad'  in flat or 'nagad'  in p: return 'nagad', 'nagad_standard'
-    if 'bkash'  in flat or 'bkash'  in p: return 'bkash', 'bkash_business'
+    # ── Keyword fallbacks ──────────────────────────────────────────────
+    if 'statement for the account' in flat: return 'bkash', 'bkash_statement'
+    if 'nagad'  in flat or 'nagad'  in p:  return 'nagad', 'nagad_standard'
+    if 'bkash'  in flat or 'bkash'  in p:  return 'bkash', 'bkash_statement'
     if 'rocket' in flat or 'dbbl'   in flat: return 'rocket', 'rocket_pdf'
     return 'unknown', 'unknown'
 
@@ -104,6 +119,10 @@ def parse_nagad_standard(path):
 
 
 def parse_bkash_nagad_business(path):
+    """
+    bKash Statement Parser (Business Agent OR Customer).
+    Direction: Sender/Receiver vs account number — NOT transaction type.
+    """
     raw = pd.read_excel(path, header=None, dtype=str).fillna('').values.tolist()
 
     # Find header row
@@ -120,26 +139,46 @@ def parse_bkash_nagad_business(path):
             if re.match(r'^01[0-9]{9}$', str(c).strip()): acc = str(c).strip(); break
         if acc: break
 
+    acc_clean = re.sub(r'\s', '', acc)
+
     headers = [str(h).replace('\n', ' ').strip().lower() for h in raw[hi]]
     def col(kw): return next((i for i, h in enumerate(headers) if kw in h), -1)
 
-    iD = col('transaction date');  iT = col('transaction id')
-    iTy = col('transaction type'); iSn = col('sender')
-    iRv = col('receiver');         iAm = col('transacted amount')
-    iCm = col('commission');       iBl = col('balance')
+    iD  = col('transaction date');  iT  = col('transaction id')
+    iTy = col('transaction type');  iSn = col('sender')
+    iRv = col('receiver');          iAm = col('transacted amount')
+    iCm = col('commission');        iFe = col('fee')
+    iBl = col('balance')
 
     rows = []
     for row in raw[hi+1:]:
         if not row or all(str(c).strip() in ('', 'nan') for c in row): continue
         amt = _f(row[iAm]) if iAm >= 0 else 0
         if amt == 0: continue
-        ty  = str(row[iTy]).strip() if iTy >= 0 else ''
-        sn  = str(row[iSn]).strip() if iSn >= 0 else ''
-        rv  = str(row[iRv]).strip() if iRv >= 0 else ''
-        cm  = _f(row[iCm]) if iCm >= 0 else 0
-        if 'cash out' in ty.lower():  dr, cp = 'credit', sn
-        elif 'cash in' in ty.lower(): dr, cp = 'debit',  rv
-        else:                         dr, cp = 'credit', sn or rv
+
+        ty = str(row[iTy]).strip() if iTy >= 0 else ''
+
+        # Clean sender/receiver
+        sn = re.sub(r'\s', '', str(row[iSn]).strip()) if iSn >= 0 else ''
+        rv = re.sub(r'\s', '', str(row[iRv]).strip()) if iRv >= 0 else ''
+
+        # Direction by Sender/Receiver vs account number
+        if sn == acc_clean:
+            dr, cp = 'debit',  rv if rv not in ('', 'nan', 'NaN', 'None') else ''
+        elif rv == acc_clean:
+            dr, cp = 'credit', sn if sn not in ('', 'nan', 'NaN', 'None') else ''
+        else:
+            # Fallback: type keyword heuristic
+            ty_low = ty.lower()
+            if any(k in ty_low for k in ['cash out', 'payment', 'topup', 'bill pay',
+                                          'loan repay', 'subscribe', 'direct pay']):
+                dr, cp = 'debit', rv or sn
+            else:
+                dr, cp = 'credit', sn or rv
+
+        cm = _f(row[iCm]) if iCm >= 0 else 0
+        if cm == 0 and iFe >= 0:
+            cm = _f(row[iFe])   # Customer stmt has Fee not Commission
 
         dt_str = str(row[iD]).strip() if iD >= 0 else ''
         try:
