@@ -182,7 +182,8 @@ def parse_bkash_nagad_business(path):
 
         dt_str = str(row[iD]).strip() if iD >= 0 else ''
         try:
-            dt = pd.to_datetime(dt_str, errors='coerce')
+            # Use dayfirst=True for "30-Mar-2026" format, handles AM/PM automatically
+            dt = pd.to_datetime(dt_str, errors='coerce', dayfirst=True)
         except:
             dt = pd.NaT
         rows.append({
