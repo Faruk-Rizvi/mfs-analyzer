@@ -1182,354 +1182,250 @@ except: pass
 #  MAIN APP
 # ════════════════════════════════════════════════════════════════════════════
 def main_app():
-    # =====================================================================
-    #  NAVBAR
-    # =====================================================================
-    st.markdown("""
-    <div style="background:#fff;border-bottom:1px solid #e8ecf4;padding:12px 32px;
-         display:flex;align-items:center;justify-content:space-between;
-         box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:0;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:38px;height:38px;background:linear-gradient(135deg,#e2136e,#7c3aed);
-             border-radius:9px;display:flex;align-items:center;justify-content:center;
-             font-size:18px;box-shadow:0 2px 8px rgba(226,19,110,.3);">💳</div>
-        <div>
-          <div style="font-size:15px;font-weight:800;color:#1a2332;letter-spacing:.3px;">Mobile Financial System Analyzer</div>
-          <div style="font-size:11px;color:#9baab8;margin-top:1px;">Smart Analysis &bull; Secure &bull; Accurate &bull; Fast</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:28px;font-size:13px;font-weight:600;color:#6b7f99;">
-        <span style="cursor:pointer;">&#9432; How It Works</span>
-        <span style="cursor:pointer;">&#10003; Security</span>
-        <span style="cursor:pointer;">&#63; Help</span>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── NAVBAR ──────────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="background:#fff;border-bottom:1px solid #e8ecf4;padding:12px 28px;'
+        'display:flex;align-items:center;justify-content:space-between;'
+        'box-shadow:0 1px 4px rgba(0,0,0,.05);">'
+        '<div style="display:flex;align-items:center;gap:10px;">'
+        '<div style="width:36px;height:36px;background:linear-gradient(135deg,#e2136e,#7c3aed);'
+        'border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;">💳</div>'
+        '<div><div style="font-size:15px;font-weight:800;color:#1a2332;">Mobile Financial System Analyzer</div>'
+        '<div style="font-size:11px;color:#9baab8;">Smart Analysis • Secure • Accurate • Fast</div></div></div>'
+        '<div style="display:flex;gap:24px;font-size:13px;font-weight:600;color:#6b7f99;">'
+        '<span>ⓘ How It Works</span><span>✓ Security</span><span>? Help</span></div></div>',
+        unsafe_allow_html=True
+    )
 
-    # =====================================================================
-    #  HERO BANNER
-    # =====================================================================
-    st.markdown("""
-    <div style="background:linear-gradient(135deg,#1a0533 0%,#2d0a5e 35%,#7c3aed 70%,#e2136e 100%);
-         padding:52px 48px 44px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:-60px;right:-40px;width:320px;height:320px;
-           background:rgba(255,255,255,.04);border-radius:50%;pointer-events:none;"></div>
-      <div style="position:absolute;bottom:-80px;right:200px;width:200px;height:200px;
-           background:rgba(255,255,255,.03);border-radius:50%;pointer-events:none;"></div>
+    # ── HERO (split into small chunks) ───────────────────────────────────
+    # Part 1: Hero wrapper + title + description
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#1a0533 0%,#2d0a5e 35%,#7c3aed 70%,#e2136e 100%);'
+        'padding:48px 44px 36px;">'
+        '<h1 style="color:#fff;font-size:36px;font-weight:800;margin:0 0 12px;line-height:1.2;">'
+        'Mobile Financial System Analyzer</h1>'
+        '<p style="color:rgba(255,255,255,.82);font-size:14px;margin:0 0 22px;max-width:560px;line-height:1.7;">'
+        'Upload mobile financial statements (Excel) and get comprehensive insights, '
+        'analytics, and professional forensic reports instantly.</p></div>',
+        unsafe_allow_html=True
+    )
 
-      <div style="display:flex;align-items:center;justify-content:space-between;max-width:1200px;gap:32px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:320px;">
-          <h1 style="color:#fff;font-size:38px;font-weight:800;margin:0 0 12px 0;line-height:1.2;">
-            Mobile Financial System Analyzer
-          </h1>
-          <p style="color:rgba(255,255,255,.82);font-size:14px;margin:0 0 24px 0;max-width:520px;line-height:1.7;">
-            Upload mobile financial statements (Excel) and get comprehensive insights,
-            analytics, and professional forensic reports instantly.
-          </p>
-          <div style="margin-bottom:22px;">
-            <div style="font-size:12px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">
-              Supported Services:
-            </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <div style="background:#fff;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;
-                   color:#e2136e;display:flex;align-items:center;gap:7px;box-shadow:0 2px 8px rgba(0,0,0,.15);">
-                🔴 bKash</div>
-              <div style="background:#fff;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;
-                   color:#e85d04;display:flex;align-items:center;gap:7px;box-shadow:0 2px 8px rgba(0,0,0,.15);">
-                🟠 Nagad</div>
-              <div style="background:#fff;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;
-                   color:#7c3aed;display:flex;align-items:center;gap:7px;box-shadow:0 2px 8px rgba(0,0,0,.15);">
-                🟣 Rocket</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);
-                 padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
-              📊 Financial Analysis</div>
-            <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);
-                 padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
-              🔄 Transaction Analytics</div>
-            <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);
-                 padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
-              👥 Top Sender/Receiver Analysis</div>
-            <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);
-                 padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
-              📈 Trend &amp; Pattern Detection</div>
-            <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);
-                 padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
-              📄 HTML Forensic Reports</div>
-          </div>
-        </div>
+    # Part 2: Supported Services badges
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#2d0a5e,#7c3aed);padding:0 44px 12px;">'
+        '<div style="font-size:12px;color:rgba(255,255,255,.6);text-transform:uppercase;'
+        'letter-spacing:1.5px;margin-bottom:10px;">Supported Services:</div>'
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+        '<div style="background:#fff;border-radius:8px;padding:7px 18px;font-size:13px;'
+        'font-weight:700;color:#e2136e;">🔴 bKash</div>'
+        '<div style="background:#fff;border-radius:8px;padding:7px 18px;font-size:13px;'
+        'font-weight:700;color:#e85d04;">🟠 Nagad</div>'
+        '<div style="background:#fff;border-radius:8px;padding:7px 18px;font-size:13px;'
+        'font-weight:700;color:#7c3aed;">🟣 Rocket</div>'
+        '</div></div>',
+        unsafe_allow_html=True
+    )
 
-        <!-- Phone Mockup -->
-        <div style="display:flex;gap:16px;align-items:flex-start;flex-shrink:0;">
-          <div style="background:#fff;border-radius:24px;padding:18px 14px;width:168px;
-               box-shadow:0 20px 60px rgba(0,0,0,.35);border:6px solid #1a1a2e;">
-            <div style="background:linear-gradient(135deg,#f4f6f9,#e8ecf4);border-radius:12px;
-                 padding:14px 12px;margin-bottom:8px;">
-              <div style="font-size:9px;color:#6b7f99;margin-bottom:4px;">Total Balance</div>
-              <div style="font-size:16px;font-weight:800;color:#1a2332;">&#3647; 68,540.00</div>
-              <div style="display:flex;gap:6px;margin-top:8px;flex-direction:column;">
-                <div style="display:flex;align-items:center;gap:4px;">
-                  <span style="color:#00875a;font-size:11px;font-weight:700;">&#8595;</span>
-                  <div>
-                    <div style="font-size:8px;color:#6b7f99;">Total Credit (In)</div>
-                    <div style="font-size:12px;font-weight:700;color:#00875a;">&#3647; 1,64,273.00</div>
-                  </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:4px;">
-                  <span style="color:#c0392b;font-size:11px;font-weight:700;">&#8593;</span>
-                  <div>
-                    <div style="font-size:8px;color:#6b7f99;">Total Debit (Out)</div>
-                    <div style="font-size:12px;font-weight:700;color:#c0392b;">&#3647; 95,010.00</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style="height:3px;background:linear-gradient(90deg,#e2136e,#7c3aed);border-radius:2px;"></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <div style="background:#fff;border-radius:14px;padding:12px 14px;width:120px;
-                 box-shadow:0 8px 24px rgba(0,0,0,.2);">
-              <div style="font-size:9px;color:#6b7f99;margin-bottom:8px;">Distribution</div>
-              <div style="display:flex;justify-content:center;align-items:center;height:52px;">
-                <div style="width:52px;height:52px;border-radius:50%;background:conic-gradient(#e2136e 0% 63%,#00875a 63% 82%,#7c3aed 82% 100%);position:relative;">
-                  <div style="position:absolute;inset:12px;background:#fff;border-radius:50%;"></div>
-                </div>
-              </div>
-              <div style="display:flex;gap:6px;margin-top:6px;justify-content:center;flex-direction:column;">
-                <div style="display:flex;align-items:center;gap:4px;font-size:8px;color:#6b7f99;">
-                  <div style="width:6px;height:6px;background:#e2136e;border-radius:50%;"></div>Cash Out</div>
-                <div style="display:flex;align-items:center;gap:4px;font-size:8px;color:#6b7f99;">
-                  <div style="width:6px;height:6px;background:#00875a;border-radius:50%;"></div>Cash In</div>
-              </div>
-            </div>
-            <div style="background:#fff;border-radius:14px;padding:12px 14px;width:120px;
-                 box-shadow:0 8px 24px rgba(0,0,0,.2);">
-              <div style="font-size:9px;color:#6b7f99;margin-bottom:6px;">Trend</div>
-              <svg width="96" height="44" viewBox="0 0 96 44">
-                <polyline points="0,36 16,28 32,32 48,18 64,22 80,12 96,8"
-                  fill="none" stroke="#e2136e" stroke-width="2" stroke-linecap="round"/>
-                <polyline points="0,40 16,34 32,36 48,24 64,28 80,18 96,14"
-                  fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Part 3: Feature pills
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#7c3aed,#e2136e);padding:12px 44px 32px;">'
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+        '<span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);'
+        'color:rgba(255,255,255,.9);padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;">'
+        '📊 Financial Analysis</span>'
+        '<span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);'
+        'color:rgba(255,255,255,.9);padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;">'
+        '🔄 Transaction Analytics</span>'
+        '<span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);'
+        'color:rgba(255,255,255,.9);padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;">'
+        '👥 Top Sender/Receiver Analysis</span>'
+        '<span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);'
+        'color:rgba(255,255,255,.9);padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;">'
+        '📈 Trend & Pattern Detection</span>'
+        '<span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);'
+        'color:rgba(255,255,255,.9);padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;">'
+        '📄 HTML Forensic Reports</span>'
+        '</div></div>',
+        unsafe_allow_html=True
+    )
 
-    # =====================================================================
-    #  UPLOAD SECTION (3 columns)
-    # =====================================================================
-    st.markdown('<div style="padding:28px 32px 8px;">', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([5, 4, 4])
+    # ── UPLOAD SECTION ────────────────────────────────────────────────────
+    st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([5, 4, 4], gap="large")
 
     with col1:
-        st.markdown("""
-        <div style="margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <div style="width:32px;height:32px;background:linear-gradient(135deg,#e2136e,#b8005a);
-                 border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">📤</div>
-            <div>
-              <div style="font-size:15px;font-weight:700;color:#1a2332;">1. Upload Statement (Excel / PDF)</div>
-              <div style="font-size:12px;color:#9baab8;">Upload bKash / Nagad (Excel) or Rocket (PDF) statement.</div>
-            </div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            '<div style="width:30px;height:30px;background:linear-gradient(135deg,#e2136e,#b8005a);'
+            'border-radius:7px;display:flex;align-items:center;justify-content:center;">📤</div>'
+            '<div><div style="font-size:14px;font-weight:700;color:#1a2332;">'
+            '1. Upload Statement (Excel / PDF)</div>'
+            '<div style="font-size:11px;color:#9baab8;">'
+            'Upload bKash / Nagad (Excel) or Rocket (PDF)</div></div></div>',
+            unsafe_allow_html=True
+        )
         uploaded = st.file_uploader(
             "Drag & drop or click to browse",
-            type=['xlsx', 'xls', 'csv', 'pdf'],
-            help="Max file size: 50MB"
+            type=["xlsx", "xls", "csv", "pdf"],
+            help="Max 50MB · XLSX/XLS/CSV for bKash/Nagad · PDF for Rocket"
         )
-        st.markdown("""
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:#9baab8;margin-top:4px;">
-          <span>&#10004; Supported: .XLSX · .XLS · .CSV · .PDF</span>
-          <span>&#9432; Max file size: 50MB</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-size:11px;color:#9baab8;margin-top:4px;">'
+            '✔ Supported: .XLSX · .XLS · .CSV · .PDF &nbsp;|&nbsp; ⓘ Max: 50MB</div>',
+            unsafe_allow_html=True
+        )
         if uploaded:
-            st.success(f"✅ **{uploaded.name}** ({uploaded.size/1024:.1f} KB) — Ready to analyze")
+            st.success(f"✅ **{uploaded.name}** ({uploaded.size/1024:.1f} KB) — Ready")
 
     with col2:
-        st.markdown("""
-        <div style="margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <div style="width:32px;height:32px;background:linear-gradient(135deg,#7c3aed,#5b21b6);
-                 border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">&#128222;</div>
-            <div>
-              <div style="font-size:15px;font-weight:700;color:#1a2332;">2. Account / Number (Optional)</div>
-              <div style="font-size:12px;color:#9baab8;">Focus analysis on a specific phone number.</div>
-            </div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            '<div style="width:30px;height:30px;background:linear-gradient(135deg,#7c3aed,#5b21b6);'
+            'border-radius:7px;display:flex;align-items:center;justify-content:center;">📱</div>'
+            '<div><div style="font-size:14px;font-weight:700;color:#1a2332;">'
+            '2. Account / Number (Optional)</div>'
+            '<div style="font-size:11px;color:#9baab8;">'
+            'Focus analysis on a specific number</div></div></div>',
+            unsafe_allow_html=True
+        )
         focus_num = st.text_input(
             "Phone / Account Number",
             value="",
             placeholder="e.g. 01806125243",
-            label_visibility="collapsed",
-            help="Optional: Enter any number to see only transactions related to it."
+            label_visibility="collapsed"
         ).strip()
+        st.markdown(
+            '<div style="background:#f8f9fb;border:1px solid #e8ecf4;border-radius:8px;'
+            'padding:10px 12px;font-size:12px;color:#6b7f99;margin-top:4px;">'
+            'ⓘ This helps highlight transactions related to the specific number in the report.</div>',
+            unsafe_allow_html=True
+        )
         if focus_num:
-            st.info(f"🔎 Analysis will highlight transactions involving **{focus_num}**")
-        else:
-            st.markdown("""
-            <div style="background:#f8f9fb;border:1px solid #e8ecf4;border-radius:8px;
-                 padding:12px 14px;font-size:12px;color:#6b7f99;margin-top:4px;">
-              &#9432; This helps highlight transactions related to the specific number in the report.
-            </div>
-            """, unsafe_allow_html=True)
+            st.info(f"🔎 Will highlight: **{focus_num}**")
 
     with col3:
-        st.markdown("""
-        <div style="background:#fff;border:1px solid #e8ecf4;border-radius:12px;padding:18px 16px;">
-          <div style="font-size:13px;font-weight:700;color:#1a2332;margin-bottom:12px;">What You Will Get</div>
-          <div style="display:flex;flex-direction:column;gap:0;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f4f6f9;font-size:12px;color:#3a4a5c;">
-              <span>&#128200; Overall Financial Summary</span><span style="color:#9baab8;">&#8250;</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f4f6f9;font-size:12px;color:#3a4a5c;">
-              <span>&#8645; Credit (In) vs Debit (Out) Analysis</span><span style="color:#9baab8;">&#8250;</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f4f6f9;font-size:12px;color:#3a4a5c;">
-              <span>&#8801; Transaction Type Analysis</span><span style="color:#9baab8;">&#8250;</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f4f6f9;font-size:12px;color:#3a4a5c;">
-              <span>&#128101; Top Senders / Receivers</span><span style="color:#9baab8;">&#8250;</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f4f6f9;font-size:12px;color:#3a4a5c;">
-              <span>&#128197; Daily / Monthly Trend Analysis</span><span style="color:#9baab8;">&#8250;</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f4f6f9;font-size:12px;color:#3a4a5c;">
-              <span>&#9888; Suspicious Activity Detection</span><span style="color:#9baab8;">&#8250;</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:12px;color:#3a4a5c;">
-              <span>&#128196; Professional HTML Forensic Report</span><span style="color:#9baab8;">&#8250;</span></div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # =====================================================================
-    #  NO FILE UPLOADED — SAMPLE PREVIEW + CAPABILITIES
-    # =====================================================================
-    if not uploaded:
-        st.markdown('<div style="padding:0 32px;">', unsafe_allow_html=True)
-        st.markdown("""
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;margin-top:8px;">
-          <span style="font-size:15px;">&#128202;</span>
-          <span style="font-size:14px;font-weight:700;color:#1a2332;">Report Preview (Sample Insights)</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        pc1, pc2, pc3, pc4 = st.columns(4)
-        pc1.markdown("""<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);">
-          <div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;letter-spacing:.8px;">Total Credit (In)</div>
-          <div style="font-size:22px;font-weight:800;color:#00875a;margin-top:4px;">&#3647; 1,64,273.00</div>
-          <div style="font-size:11px;color:#00875a;margin-top:2px;">&#8679; Received from customers</div>
-        </div>""", unsafe_allow_html=True)
-        pc2.markdown("""<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);">
-          <div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;letter-spacing:.8px;">Total Debit (Out)</div>
-          <div style="font-size:22px;font-weight:800;color:#c0392b;margin-top:4px;">&#3647; 95,010.00</div>
-          <div style="font-size:11px;color:#c0392b;margin-top:2px;">&#8679; Sent to customers</div>
-        </div>""", unsafe_allow_html=True)
-        pc3.markdown("""<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);">
-          <div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;letter-spacing:.8px;">Net Balance</div>
-          <div style="font-size:22px;font-weight:800;color:#1557a0;margin-top:4px;">&#3647; 69,263.00</div>
-          <div style="font-size:11px;color:#1557a0;margin-top:2px;">&#9878; Net flow calculation</div>
-        </div>""", unsafe_allow_html=True)
-        pc4.markdown("""<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);">
-          <div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;letter-spacing:.8px;">Total Transactions</div>
-          <div style="font-size:28px;font-weight:800;color:#7c3aed;margin-top:4px;">156</div>
-          <div style="font-size:11px;color:#7c3aed;margin-top:2px;">&#128196; All transaction records</div>
-        </div>""", unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # Key Capabilities
-        st.markdown("""
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          <span style="color:#e2136e;font-size:16px;">&#9733;</span>
-          <span style="font-size:14px;font-weight:700;color:#1a2332;">Key Capabilities</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;">
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128247;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Automatic Data Processing</div>
-            <div style="font-size:11px;color:#9baab8;">Auto-detect bKash, Nagad, Rocket</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128200;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Pattern &amp; Trend Detection</div>
-            <div style="font-size:11px;color:#9baab8;">Hourly, daily, monthly trends</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#129521;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Smart Categorization</div>
-            <div style="font-size:11px;color:#9baab8;">Transaction size & type grouping</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128269;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Search &amp; Export Data</div>
-            <div style="font-size:11px;color:#9baab8;">CSV and HTML report export</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#9888;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Duplicate Detection</div>
-            <div style="font-size:11px;color:#9baab8;">Identify repeated transactions</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128101;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Multi-Account Analysis</div>
-            <div style="font-size:11px;color:#9baab8;">Focus on specific numbers</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128736;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Advanced Filtering</div>
-            <div style="font-size:11px;color:#9baab8;">Filter by size, type, direction</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128196;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Detailed Forensic Report</div>
-            <div style="font-size:11px;color:#9baab8;">Professional HTML &amp; Word output</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128204;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">High Value Transaction Alert</div>
-            <div style="font-size:11px;color:#9baab8;">Flag large or suspicious txns</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-            <span style="font-size:18px;">&#128274;</span>
-            <div><div style="font-size:12px;font-weight:700;color:#1a2332;">Data Security &amp; Privacy</div>
-            <div style="font-size:11px;color:#9baab8;">Processed locally, no data stored</div></div></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Footer info row
-        st.markdown("""
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:20px 0;
-             border-top:1px solid #e8ecf4;margin-top:4px;">
-          <div style="text-align:center;padding:16px;">
-            <div style="font-size:24px;margin-bottom:8px;">&#128274;</div>
-            <div style="font-size:13px;font-weight:700;color:#1a2332;">Secure &amp; Private</div>
-            <div style="font-size:11px;color:#9baab8;margin-top:4px;">Your data is 100% secure and processed locally.</div>
-          </div>
-          <div style="text-align:center;padding:16px;">
-            <div style="font-size:24px;margin-bottom:8px;">&#9889;</div>
-            <div style="font-size:13px;font-weight:700;color:#1a2332;">Fast Processing</div>
-            <div style="font-size:11px;color:#9baab8;margin-top:4px;">Get results and reports within seconds.</div>
-          </div>
-          <div style="text-align:center;padding:16px;">
-            <div style="font-size:24px;margin-bottom:8px;">&#127919;</div>
-            <div style="font-size:13px;font-weight:700;color:#1a2332;">Accurate Insights</div>
-            <div style="font-size:11px;color:#9baab8;margin-top:4px;">Smart analysis with advanced algorithms.</div>
-          </div>
-          <div style="text-align:center;padding:16px;">
-            <div style="font-size:24px;margin-bottom:8px;">&#128196;</div>
-            <div style="font-size:13px;font-weight:700;color:#1a2332;">HTML Report</div>
-            <div style="font-size:11px;color:#9baab8;margin-top:4px;">Professional, printable and easy to share.</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div style="background:#fff;border:1px solid #e8ecf4;border-radius:12px;padding:16px;">'
+            '<div style="font-size:13px;font-weight:700;color:#1a2332;margin-bottom:10px;">'
+            'What You Will Get</div>', unsafe_allow_html=True
+        )
+        items = [
+            ("📊", "Overall Financial Summary"),
+            ("↕", "Credit (In) vs Debit (Out) Analysis"),
+            ("≡", "Transaction Type Analysis"),
+            ("👥", "Top Senders / Receivers"),
+            ("🗂", "Category-wise Breakdown"),
+            ("📅", "Daily / Monthly Trend Analysis"),
+            ("⚠", "Suspicious Activity Detection"),
+            ("📄", "Professional HTML Forensic Report"),
+        ]
+        for icon, label in items:
+            st.markdown(
+                f'<div style="display:flex;align-items:center;justify-content:space-between;'
+                f'padding:6px 0;border-bottom:1px solid #f4f6f9;font-size:12px;color:#3a4a5c;">'
+                f'<span>{icon} {label}</span><span style="color:#9baab8;">›</span></div>',
+                unsafe_allow_html=True
+            )
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── NO FILE — SAMPLE PREVIEW ─────────────────────────────────────────
+    if not uploaded:
+        st.markdown("---")
+        st.markdown(
+            '<div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:14px;">'
+            '📊 Report Preview (Sample Insights)</div>',
+            unsafe_allow_html=True
+        )
+        p1, p2, p3, p4 = st.columns(4)
+        p1.markdown(
+            '<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;">'
+            '<div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;">'
+            'Total Credit (In)</div>'
+            '<div style="font-size:22px;font-weight:800;color:#00875a;margin-top:4px;">৳ 1,64,273.00</div>'
+            '<div style="font-size:11px;color:#00875a;margin-top:2px;">↑ Received</div></div>',
+            unsafe_allow_html=True
+        )
+        p2.markdown(
+            '<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;">'
+            '<div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;">'
+            'Total Debit (Out)</div>'
+            '<div style="font-size:22px;font-weight:800;color:#c0392b;margin-top:4px;">৳ 95,010.00</div>'
+            '<div style="font-size:11px;color:#c0392b;margin-top:2px;">↑ Sent</div></div>',
+            unsafe_allow_html=True
+        )
+        p3.markdown(
+            '<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;">'
+            '<div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;">'
+            'Net Balance</div>'
+            '<div style="font-size:22px;font-weight:800;color:#1557a0;margin-top:4px;">৳ 69,263.00</div>'
+            '<div style="font-size:11px;color:#1557a0;margin-top:2px;">⚖ Net flow</div></div>',
+            unsafe_allow_html=True
+        )
+        p4.markdown(
+            '<div style="background:#fff;border:1px solid #e8ecf4;border-radius:10px;padding:16px;">'
+            '<div style="font-size:11px;color:#6b7f99;font-weight:600;text-transform:uppercase;">'
+            'Total Transactions</div>'
+            '<div style="font-size:28px;font-weight:800;color:#7c3aed;margin-top:4px;">156</div>'
+            '<div style="font-size:11px;color:#7c3aed;margin-top:2px;">📋 Records</div></div>',
+            unsafe_allow_html=True
+        )
+
+        st.markdown("---")
+        st.markdown(
+            '<div style="font-size:15px;font-weight:700;color:#1a2332;margin-bottom:14px;">'
+            '⭐ Key Capabilities</div>',
+            unsafe_allow_html=True
+        )
+        caps = [
+            ("📷","Automatic Data Processing","Auto-detect bKash, Nagad, Rocket"),
+            ("📈","Pattern & Trend Detection","Hourly, daily, monthly trends"),
+            ("🏷","Smart Categorization","Transaction size & type grouping"),
+            ("🔍","Search & Export Data","CSV and HTML report export"),
+            ("⚠","Duplicate Detection","Identify repeated transactions"),
+            ("👥","Multi-Account Analysis","Focus on specific numbers"),
+            ("🔧","Advanced Filtering","Filter by size, type, direction"),
+            ("📄","Detailed Forensic Report","Professional HTML & Word output"),
+            ("🚨","High Value Transaction Alert","Flag large or suspicious txns"),
+            ("🔒","Data Security & Privacy","Processed locally, no data stored"),
+        ]
+        ca, cb = st.columns(2)
+        for i, (icon, title, sub) in enumerate(caps):
+            col = ca if i % 2 == 0 else cb
+            col.markdown(
+                f'<div style="display:flex;align-items:center;gap:10px;background:#fff;'
+                f'border:1px solid #e8ecf4;border-radius:8px;padding:12px 14px;'
+                f'margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.04);">'
+                f'<span style="font-size:18px;">{icon}</span>'
+                f'<div><div style="font-size:12px;font-weight:700;color:#1a2332;">{title}</div>'
+                f'<div style="font-size:11px;color:#9baab8;">{sub}</div></div></div>',
+                unsafe_allow_html=True
+            )
+
+        st.markdown("---")
+        f1, f2, f3, f4 = st.columns(4)
+        for col, icon, title, desc in [
+            (f1,"🔒","Secure & Private","Your data is 100% secure and processed locally."),
+            (f2,"⚡","Fast Processing","Get results and reports within seconds."),
+            (f3,"🎯","Accurate Insights","Smart analysis with advanced algorithms."),
+            (f4,"📄","HTML Report","Professional, printable and easy to share."),
+        ]:
+            col.markdown(
+                f'<div style="text-align:center;padding:14px;">'
+                f'<div style="font-size:24px;margin-bottom:8px;">{icon}</div>'
+                f'<div style="font-size:13px;font-weight:700;color:#1a2332;">{title}</div>'
+                f'<div style="font-size:11px;color:#9baab8;margin-top:4px;">{desc}</div></div>',
+                unsafe_allow_html=True
+            )
         return
 
     # =====================================================================
     #  PROCESS FILE
     # =====================================================================
     with st.spinner("Analyzing file, please wait..."):
-        ext = uploaded.name.rsplit('.', 1)[-1].lower()
+        ext = uploaded.name.rsplit(".", 1)[-1].lower()
         file_bytes = uploaded.read()
 
-        if ext == 'pdf':
+        if ext == "pdf":
             if not PDF_OK:
                 st.error("pdfplumber not installed. Run: pip install pdfplumber")
                 return
@@ -1538,261 +1434,211 @@ def main_app():
                 return
             with st.spinner("Extracting data from PDF..."):
                 acc, rows = parse_rocket_pdf(file_bytes)
-            provider, fmt = 'rocket', 'rocket'
+            provider, fmt = "rocket", "rocket"
         else:
             try:
                 import io as _io
                 buf = _io.BytesIO(file_bytes)
-                if ext == 'csv':
-                    df_raw = pd.read_csv(buf, header=None, dtype=str)
-                else:
-                    df_raw = pd.read_excel(buf, header=None, dtype=str)
-                raw = df_raw.fillna('').values.tolist()
+                df_raw = pd.read_csv(buf, header=None, dtype=str) if ext == "csv"                          else pd.read_excel(buf, header=None, dtype=str)
+                raw = df_raw.fillna("").values.tolist()
             except Exception as e:
                 st.error(f"Cannot read file: {e}")
                 return
             provider, fmt = detect_provider(raw, uploaded.name)
-            if provider == 'unknown':
-                st.error("Format not recognized. Please upload a bKash, Nagad or Rocket statement.")
+            if provider == "unknown":
+                st.error("Format not recognized. Upload a bKash, Nagad or Rocket statement.")
                 return
-            if fmt == 'nagad_standard':
+            if fmt == "nagad_standard":
                 acc, rows = parse_nagad_standard(raw)
             else:
                 acc, rows = parse_bkash_nagad_business(raw)
-                if 'nagad' in uploaded.name.lower():
-                    provider = 'nagad'
+                if "nagad" in uploaded.name.lower():
+                    provider = "nagad"
 
         if not rows:
-            st.error("No transactions found in this file.")
+            st.error("No transactions found.")
             return
-
         s, main = analyse(rows)
         if s is None:
             st.error("Analysis failed.")
             return
 
-    ac      = ACCENT.get(provider, '#6b7f99')
-    pname   = {'nagad': 'Nagad', 'bkash': 'bKash', 'rocket': 'Rocket (DBBL)'}.get(provider, 'Unknown')
-    icon    = {'nagad': '🟠', 'bkash': '🔴', 'rocket': '🟣'}.get(provider, '❓')
-    fmt_lbl = {'nagad_standard': 'Agent/Individual', 'nagad_business': 'Business',
-                'bkash_business': 'Business Agent', 'rocket': 'Rocket Agent'}.get(fmt, fmt)
+    ac     = ACCENT.get(provider, "#6b7f99")
+    pname  = {"nagad":"Nagad","bkash":"bKash","rocket":"Rocket (DBBL)"}.get(provider,"Unknown")
+    icon   = {"nagad":"🟠","bkash":"🔴","rocket":"🟣"}.get(provider,"❓")
+    fmt_lbl= {"nagad_standard":"Agent/Individual","nagad_business":"Business",
+               "bkash_business":"Business Agent","rocket":"Rocket Agent"}.get(fmt, fmt)
 
-    # =====================================================================
-    #  PROVIDER BANNER
-    # =====================================================================
-    st.markdown(f"""
-    <div class="prov-{provider}">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:14px;">
-          <span style="font-size:32px;">{icon}</span>
-          <div>
-            <div style="font-size:20px;font-weight:800;color:{ac};">{pname}</div>
-            <div style="font-size:11px;color:#9baab8;text-transform:uppercase;letter-spacing:1px;">{fmt_lbl} &bull; {uploaded.name}</div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-family:monospace;font-size:17px;font-weight:700;color:#1a2332;">{acc or "—"}</div>
-          <div style="font-size:12px;color:#9baab8;">{s['start']} &rarr; {s['end']} &bull; {s['active']} active days</div>
-        </div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── PROVIDER BANNER ──
+    st.markdown(
+        f'<div class="prov-{provider}">'
+        f'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">'
+        f'<div style="display:flex;align-items:center;gap:14px;">'
+        f'<span style="font-size:30px;">{icon}</span>'
+        f'<div><div style="font-size:20px;font-weight:800;color:{ac};">{pname}</div>'
+        f'<div style="font-size:11px;color:#9baab8;text-transform:uppercase;letter-spacing:1px;">'
+        f'{fmt_lbl} · {uploaded.name}</div></div></div>'
+        f'<div style="text-align:right;">'
+        f'<div style="font-family:monospace;font-size:16px;font-weight:700;color:#1a2332;">{acc or "—"}</div>'
+        f'<div style="font-size:12px;color:#9baab8;">{s["start"]} → {s["end"]} · {s["active"]} active days</div>'
+        f'</div></div></div>',
+        unsafe_allow_html=True
+    )
 
-    # Summary infobox
-    st.markdown(f"""
-    <div class="sum-box">
-      <strong>{pname}</strong> account <strong>{acc}</strong> — <strong>{s['total']:,} transactions</strong>
-      over <strong>{s['active']} active days</strong> ({s['start']} to {s['end']}).
-      &nbsp;|&nbsp; Total Credit (In): <strong style="color:#00875a">BDT {s['cr_amt']:,.2f}</strong> ({s['cr_cnt']:,} txns)
-      &nbsp;|&nbsp; Total Debit (Out): <strong style="color:#c0392b">BDT {s['db_amt']:,.2f}</strong> ({s['db_cnt']:,} txns)
-      &nbsp;|&nbsp; Commission: <strong style="color:#b86e00">BDT {s['comm_amt']:,.2f}</strong>
-      {"&nbsp;|&nbsp; <span style='color:#c0392b;'>&#9888; HIGH night-time activity (" + str(s['night_pct']) + "%) — requires investigation.</span>" if s['night_pct'] > 35 else "&nbsp;|&nbsp; Night-time activity (10PM–2AM): <strong>" + str(s['night_pct']) + "%</strong>"}
-    </div>
-    """, unsafe_allow_html=True)
+    # ── SUMMARY ──
+    night_warn = (f' <span style="color:#c0392b;">⚠ HIGH night activity ({s["night_pct"]}%) — investigate.</span>'
+                  if s["night_pct"] > 35 else f' Night activity: <strong>{s["night_pct"]}%</strong>')
+    st.markdown(
+        f'<div class="sum-box"><strong>{pname}</strong> account <strong>{acc}</strong> — '
+        f'<strong>{s["total"]:,} transactions</strong> over <strong>{s["active"]} active days</strong> '
+        f'({s["start"]} to {s["end"]}).'
+        f' | Credit (In): <strong style="color:#00875a">BDT {s["cr_amt"]:,.2f}</strong> ({s["cr_cnt"]:,})'
+        f' | Debit (Out): <strong style="color:#c0392b">BDT {s["db_amt"]:,.2f}</strong> ({s["db_cnt"]:,})'
+        f' | Commission: <strong style="color:#b86e00">BDT {s["comm_amt"]:,.2f}</strong>'
+        f'{night_warn}</div>',
+        unsafe_allow_html=True
+    )
 
-    # =====================================================================
-    #  METRIC CARDS
-    # =====================================================================
+    # ── METRICS ──
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total Transactions",     f"{s['total']:,}",           "Excl. commission entries")
-    m2.metric("Total Credit (In)",      f"BDT {s['cr_amt']:,.2f}",   f"{s['cr_cnt']:,} transactions")
-    m3.metric("Total Debit (Out)",      f"BDT {s['db_amt']:,.2f}",   f"{s['db_cnt']:,} transactions")
-    m4.metric("Commission Earned",      f"BDT {s['comm_amt']:,.2f}", f"{s['comm_cnt']:,} entries")
+    m1.metric("Total Transactions",   f"{s['total']:,}",              "Excl. commission")
+    m2.metric("Total Credit (In)",    f"BDT {s['cr_amt']:,.2f}",      f"{s['cr_cnt']:,} txns")
+    m3.metric("Total Debit (Out)",    f"BDT {s['db_amt']:,.2f}",      f"{s['db_cnt']:,} txns")
+    m4.metric("Commission Earned",    f"BDT {s['comm_amt']:,.2f}",    f"{s['comm_cnt']:,} entries")
 
-    # =====================================================================
-    #  TREND CHARTS
-    # =====================================================================
+    # ── CHARTS ──
     st.markdown("---")
-    st.markdown('<div style="padding:0 32px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#9baab8;border-bottom:2px solid #f0f4f8;padding-bottom:8px;margin-bottom:16px;">&#128202; Trend & Pattern Analysis</div>', unsafe_allow_html=True)
+    st.markdown("**📈 Trend & Pattern Analysis**")
+    chart = fig_monthly(main, ac) if s["active"] > 7 else fig_daily(main, ac)
+    if chart: st.plotly_chart(chart, use_container_width=True)
 
-    main_chart = fig_monthly(main, ac) if s['active'] > 7 else fig_daily(main, ac)
-    if main_chart:
-        st.plotly_chart(main_chart, use_container_width=True)
-
-    ch1, ch2 = st.columns(2)
-    with ch1:
+    c1, c2 = st.columns(2)
+    with c1:
         fh = fig_hourly(main, ac)
         if fh: st.plotly_chart(fh, use_container_width=True)
-    with ch2:
+    with c2:
         ft = fig_type_bar(main, ac)
         if ft: st.plotly_chart(ft, use_container_width=True)
 
-    ch3, ch4 = st.columns(2)
-    with ch3:
-        st.plotly_chart(fig_size_pie(main), use_container_width=True)
-    with ch4:
-        st.plotly_chart(fig_direction(main), use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    c3, c4 = st.columns(2)
+    with c3: st.plotly_chart(fig_size_pie(main), use_container_width=True)
+    with c4: st.plotly_chart(fig_direction(main), use_container_width=True)
 
-    # =====================================================================
-    #  CATEGORY BREAKDOWN
-    # =====================================================================
+    # ── CATEGORY BREAKDOWN ──
     st.markdown("---")
-    st.markdown('<div style="padding:0 32px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#9baab8;border-bottom:2px solid #f0f4f8;padding-bottom:8px;margin-bottom:16px;">&#128202; Category-wise Breakdown</div>', unsafe_allow_html=True)
+    st.markdown("**📊 Category-wise Breakdown**")
     tb1, tb2, tb3 = st.columns(3)
-
     with tb1:
         st.markdown("**Transaction Size**")
-        sz = main.groupby('আকার').agg(Count=('পরিমাণ','count'), Amount=('পরিমাণ','sum')).reset_index()
-        sz.columns = ['Size Category', 'Count', 'Total Amount (BDT)']
-        sz['Total Amount (BDT)'] = sz['Total Amount (BDT)'].apply(lambda x: f"BDT {x:,.2f}")
+        sz = main.groupby("আকার").agg(Count=("পরিমাণ","count"), Amount=("পরিমাণ","sum")).reset_index()
+        sz.columns = ["Size", "Count", "Total (BDT)"]
+        sz["Total (BDT)"] = sz["Total (BDT)"].apply(lambda x: f"BDT {x:,.2f}")
         st.dataframe(sz, use_container_width=True, hide_index=True)
-
     with tb2:
         st.markdown("**Transaction Type**")
-        tp = main.groupby('ধরন').agg(Count=('পরিমাণ','count'), Amount=('পরিমাণ','sum'))                 .sort_values('Amount', ascending=False).reset_index()
-        tp.columns = ['Type', 'Count', 'Total Amount (BDT)']
-        tp['Total Amount (BDT)'] = tp['Total Amount (BDT)'].apply(lambda x: f"BDT {x:,.2f}")
+        tp = main.groupby("ধরন").agg(Count=("পরিমাণ","count"), Amount=("পরিমাণ","sum"))                 .sort_values("Amount", ascending=False).reset_index()
+        tp.columns = ["Type", "Count", "Total (BDT)"]
+        tp["Total (BDT)"] = tp["Total (BDT)"].apply(lambda x: f"BDT {x:,.2f}")
         st.dataframe(tp, use_container_width=True, hide_index=True)
-
     with tb3:
         st.markdown("**Channel**")
-        ch = main.groupby('চ্যানেল').agg(Count=('পরিমাণ','count'), Amount=('পরিমাণ','sum')).reset_index()
-        ch.columns = ['Channel', 'Count', 'Total Amount (BDT)']
-        ch['Total Amount (BDT)'] = ch['Total Amount (BDT)'].apply(lambda x: f"BDT {x:,.2f}")
+        ch = main.groupby("চ্যানেল").agg(Count=("পরিমাণ","count"), Amount=("পরিমাণ","sum")).reset_index()
+        ch.columns = ["Channel", "Count", "Total (BDT)"]
+        ch["Total (BDT)"] = ch["Total (BDT)"].apply(lambda x: f"BDT {x:,.2f}")
         st.dataframe(ch, use_container_width=True, hide_index=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    # =====================================================================
-    #  TOP SENDERS / RECEIVERS
-    # =====================================================================
+    # ── TOP SENDERS / RECEIVERS ──
     st.markdown("---")
-    st.markdown('<div style="padding:0 32px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#9baab8;border-bottom:2px solid #f0f4f8;padding-bottom:8px;margin-bottom:16px;">&#128101; Top Senders / Receivers</div>', unsafe_allow_html=True)
+    st.markdown("**👥 Top Senders / Receivers**")
+    cp_valid = main[~main["কাউন্টারপার্ট"].isin(["SYSTEM","","nan","None"])]
     tl1, tl2 = st.columns(2)
-
-    cp_valid = main[~main['কাউন্টারপার্ট'].isin(['SYSTEM', '', 'nan', 'None'])]
-
     with tl1:
-        st.markdown("**Top 10 Numbers — Highest Amount Received From (Credit)**")
-        top_r = cp_valid[cp_valid['direction']=='credit']                  .groupby('কাউন্টারপার্ট').agg(Transactions=('পরিমাণ','count'), Amount=('পরিমাণ','sum'))                  .sort_values('Amount', ascending=False).head(10).reset_index()
-        top_r.columns = ['Account Number', 'Transactions', 'Total Received (BDT)']
-        top_r['Total Received (BDT)'] = top_r['Total Received (BDT)'].apply(lambda x: f"BDT {x:,.2f}")
-        st.dataframe(top_r, use_container_width=True, hide_index=True)
-        if not top_r.empty and int(top_r.iloc[0]['Transactions']) > 30:
-            st.markdown(f'<div class="warn-box">⚠️ <strong>{top_r.iloc[0]["Account Number"]}</strong> — {int(top_r.iloc[0]["Transactions"])} transactions. Unusually high frequency.</div>', unsafe_allow_html=True)
-
+        st.markdown("**Top 10 — Highest Amount Received From (Credit)**")
+        tr = cp_valid[cp_valid["direction"]=="credit"]               .groupby("কাউন্টারপার্ট").agg(Txns=("পরিমাণ","count"), Amount=("পরিমাণ","sum"))               .sort_values("Amount", ascending=False).head(10).reset_index()
+        tr.columns = ["Account Number","Transactions","Total Received (BDT)"]
+        tr["Total Received (BDT)"] = tr["Total Received (BDT)"].apply(lambda x: f"BDT {x:,.2f}")
+        st.dataframe(tr, use_container_width=True, hide_index=True)
     with tl2:
-        st.markdown("**Top 10 Numbers — Highest Amount Sent To (Debit)**")
-        top_s = cp_valid[cp_valid['direction']=='debit']                  .groupby('কাউন্টারপার্ট').agg(Transactions=('পরিমাণ','count'), Amount=('পরিমাণ','sum'))                  .sort_values('Amount', ascending=False).head(10).reset_index()
-        top_s.columns = ['Account Number', 'Transactions', 'Total Sent (BDT)']
-        top_s['Total Sent (BDT)'] = top_s['Total Sent (BDT)'].apply(lambda x: f"BDT {x:,.2f}")
-        st.dataframe(top_s, use_container_width=True, hide_index=True)
+        st.markdown("**Top 10 — Highest Amount Sent To (Debit)**")
+        ts = cp_valid[cp_valid["direction"]=="debit"]               .groupby("কাউন্টারপার্ট").agg(Txns=("পরিমাণ","count"), Amount=("পরিমাণ","sum"))               .sort_values("Amount", ascending=False).head(10).reset_index()
+        ts.columns = ["Account Number","Transactions","Total Sent (BDT)"]
+        ts["Total Sent (BDT)"] = ts["Total Sent (BDT)"].apply(lambda x: f"BDT {x:,.2f}")
+        st.dataframe(ts, use_container_width=True, hide_index=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("**Top 10 Counterpart Accounts (All Directions)**")
-    top_all = cp_valid.groupby('কাউন্টারপার্ট').agg(Transactions=('পরিমাণ','count'), Amount=('পরিমাণ','sum'))                .sort_values('Amount', ascending=False).head(10).reset_index()
-    top_all.columns = ['Account Number', 'Transactions', 'Total Amount (BDT)']
-    top_all['Total Amount (BDT)'] = top_all['Total Amount (BDT)'].apply(lambda x: f"BDT {x:,.2f}")
-    st.dataframe(top_all, use_container_width=True, hide_index=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # =====================================================================
-    #  BUSIEST DAYS
-    # =====================================================================
+    # ── TOP DAYS ──
     st.markdown("---")
-    st.markdown('<div style="padding:0 32px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#9baab8;border-bottom:2px solid #f0f4f8;padding-bottom:8px;margin-bottom:16px;">&#128197; Top Busiest Days</div>', unsafe_allow_html=True)
-    top_days = main.groupby('দিন').agg(Transactions=('পরিমাণ','count'), Amount=('পরিমাণ','sum'))                   .sort_values('Amount', ascending=False).head(10).reset_index()
-    top_days.columns = ['Date', 'Transactions', 'Total Amount (BDT)']
-    top_days['Total Amount (BDT)'] = top_days['Total Amount (BDT)'].apply(lambda x: f"BDT {x:,.2f}")
-    st.dataframe(top_days, use_container_width=True, hide_index=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("**📅 Top 10 Busiest Days**")
+    td = main.groupby("দিন").agg(Txns=("পরিমাণ","count"), Amount=("পরিমাণ","sum"))             .sort_values("Amount", ascending=False).head(10).reset_index()
+    td.columns = ["Date","Transactions","Total Amount (BDT)"]
+    td["Total Amount (BDT)"] = td["Total Amount (BDT)"].apply(lambda x: f"BDT {x:,.2f}")
+    st.dataframe(td, use_container_width=True, hide_index=True)
 
-    # =====================================================================
-    #  PHONE NUMBER FOCUS (optional)
-    # =====================================================================
+    # ── PHONE NUMBER FOCUS ──
     if focus_num:
         st.markdown("---")
-        st.markdown('<div style="padding:0 32px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#9baab8;border-bottom:2px solid #f0f4f8;padding-bottom:8px;margin-bottom:16px;">&#128270; Number Focus Analysis</div>', unsafe_allow_html=True)
-        focus_df = main[main['কাউন্টারপার্ট'].astype(str).str.contains(focus_num, na=False, regex=False)]
-        if focus_df.empty:
-            st.warning(f"No transactions found involving **{focus_num}** in this statement.")
+        st.markdown(f"**🔎 Number Focus: {focus_num}**")
+        fdf = main[main["কাউন্টারপার্ট"].astype(str).str.contains(focus_num, na=False, regex=False)]
+        if fdf.empty:
+            st.warning(f"No transactions found involving **{focus_num}**.")
         else:
-            f_cr = focus_df[focus_df['direction'] == 'credit']
-            f_db = focus_df[focus_df['direction'] == 'debit']
-            st.markdown(f"""
-            <div style="background:#f0faf6;border:1px solid #b3dcc8;border-left:4px solid #00875a;
-                 border-radius:8px;padding:13px 18px;font-size:13px;line-height:1.8;margin-bottom:14px;">
-              ✅ Found <strong>{len(focus_df):,} transactions</strong> involving
-              <strong style="font-family:monospace;">{focus_num}</strong>.
-              &nbsp;|&nbsp; Received From: <strong style="color:#00875a">BDT {f_cr['পরিমাণ'].sum():,.2f}</strong> ({len(f_cr)} txns)
-              &nbsp;|&nbsp; Sent To: <strong style="color:#c0392b">BDT {f_db['পরিমাণ'].sum():,.2f}</strong> ({len(f_db)} txns)
-            </div>
-            """, unsafe_allow_html=True)
-            fc1, fc2, fc3, fc4 = st.columns(4)
-            fc1.metric("Total Transactions",  f"{len(focus_df):,}")
-            fc2.metric("Received From",       f"BDT {f_cr['পরিমাণ'].sum():,.2f}", f"{len(f_cr)} txns")
-            fc3.metric("Sent To",             f"BDT {f_db['পরিমাণ'].sum():,.2f}", f"{len(f_db)} txns")
-            fc4.metric("Net Flow",            f"BDT {f_cr['পরিমাণ'].sum()-f_db['পরিমাণ'].sum():,.2f}")
-            st.markdown("**All Transactions with this Number:**")
-            disp_cols = [c for c in ['তারিখ','TXN_ID','ধরন','দিক','পরিমাণ','আকার','চ্যানেল','কাউন্টারপার্ট','ব্যালেন্স'] if c in focus_df.columns]
-            renamed = {'তারিখ':'Date','TXN_ID':'TXN ID','ধরন':'Type','দিক':'Direction',
-                       'পরিমাণ':'Amount','আকার':'Size','চ্যানেল':'Channel','কাউন্টারপার্ট':'Counterpart','ব্যালেন্স':'Balance'}
-            show = focus_df[disp_cols].rename(columns=renamed).reset_index(drop=True)
-            st.dataframe(show, use_container_width=True, height=min(400, 60+35*len(show)))
-        st.markdown('</div>', unsafe_allow_html=True)
+            fcr = fdf[fdf["direction"]=="credit"]
+            fdb = fdf[fdf["direction"]=="debit"]
+            st.markdown(
+                f'<div style="background:#f0faf6;border:1px solid #b3dcc8;border-left:4px solid #00875a;'
+                f'border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px;">'
+                f'✅ <strong>{len(fdf):,} transactions</strong> found for <strong>{focus_num}</strong> | '
+                f'Received: <strong style="color:#00875a">BDT {fcr["পরিমাণ"].sum():,.2f}</strong> ({len(fcr)}) | '
+                f'Sent: <strong style="color:#c0392b">BDT {fdb["পরিমাণ"].sum():,.2f}</strong> ({len(fdb)})'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+            fc1,fc2,fc3,fc4 = st.columns(4)
+            fc1.metric("Total Transactions", f"{len(fdf):,}")
+            fc2.metric("Received From", f"BDT {fcr['পরিমাণ'].sum():,.2f}", f"{len(fcr)} txns")
+            fc3.metric("Sent To",       f"BDT {fdb['পরিমাণ'].sum():,.2f}", f"{len(fdb)} txns")
+            fc4.metric("Net Flow",      f"BDT {fcr['পরিমাণ'].sum()-fdb['পরিমাণ'].sum():,.2f}")
+            dcols = [c for c in ["তারিখ","TXN_ID","ধরন","দিক","পরিমাণ","আকার","চ্যানেল","কাউন্টারপার্ট","ব্যালেন্স"] if c in fdf.columns]
+            rmap  = {"তারিখ":"Date","TXN_ID":"TXN ID","ধরন":"Type","দিক":"Direction",
+                     "পরিমাণ":"Amount","আকার":"Size","চ্যানেল":"Channel","কাউন্টারপার্ট":"Counterpart","ব্যালেন্স":"Balance"}
+            st.dataframe(fdf[dcols].rename(columns=rmap).reset_index(drop=True),
+                         use_container_width=True, height=min(400,60+35*len(fdf)))
 
-    # =====================================================================
-    #  DOWNLOAD REPORTS
-    # =====================================================================
+    # ── DOWNLOADS ──
     st.markdown("---")
-    st.markdown('<div style="padding:0 32px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#9baab8;border-bottom:2px solid #f0f4f8;padding-bottom:8px;margin-bottom:16px;">&#11015; Download Reports</div>', unsafe_allow_html=True)
+    st.markdown("**⬇ Download Reports**")
     dl1, dl2, dl3 = st.columns(3)
-
     with dl1:
         html_data = build_html(s, main, acc, provider, fmt_lbl, uploaded.name, focus_num=focus_num)
         st.download_button("📄 Download HTML Report",
-            data=html_data.encode('utf-8'),
+            data=html_data.encode("utf-8"),
             file_name=f"mfs_report_{acc}_{provider}.html",
             mime="text/html", use_container_width=True)
-
     with dl2:
         if DOCX_OK:
-            docx_data = build_docx(s, main, acc, provider, fmt_lbl, uploaded.name)
-            if docx_data:
-                st.download_button("📝 Download Word Report (.docx)",
-                    data=docx_data,
+            ddata = build_docx(s, main, acc, provider, fmt_lbl, uploaded.name)
+            if ddata:
+                st.download_button("📝 Download Word Report",
+                    data=ddata,
                     file_name=f"mfs_report_{acc}_{provider}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     use_container_width=True)
         else:
             st.info("Word export: `pip install python-docx`")
-
     with dl3:
-        disp_cols2 = [c for c in ['তারিখ','TXN_ID','ধরন','দিক','পরিমাণ','আকার','চ্যানেল','কাউন্টারপার্ট','ব্যালেন্স'] if c in main.columns]
-        renamed2 = {'তারিখ':'Date','TXN_ID':'TXN ID','ধরন':'Type','দিক':'Direction',
-                    'পরিমাণ':'Amount','আকার':'Size','চ্যানেল':'Channel','কাউন্টারপার্ট':'Counterpart','ব্যালেন্স':'Balance'}
-        csv_df = main[disp_cols2].rename(columns=renamed2)
+        dcols2 = [c for c in ["তারিখ","TXN_ID","ধরন","দিক","পরিমাণ","আকার","চ্যানেল","কাউন্টারপার্ট","ব্যালেন্স"] if c in main.columns]
+        rmap2  = {"তারিখ":"Date","TXN_ID":"TXN ID","ধরন":"Type","দিক":"Direction",
+                  "পরিমাণ":"Amount","আকার":"Size","চ্যানেল":"Channel","কাউন্টারপার্ট":"Counterpart","ব্যালেন্স":"Balance"}
         st.download_button("📊 Download CSV",
-            data=csv_df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig'),
+            data=main[dcols2].rename(columns=rmap2).to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig"),
             file_name=f"mfs_transactions_{acc}.csv",
             mime="text/csv", use_container_width=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown(f"""
-    <div style="text-align:center;font-size:11px;color:#9baab8;padding:16px 0;
-         border-top:1px solid #e8ecf4;margin-top:12px;">
-      Mobile Financial System Analyzer &bull; {pname} &bull; Account: {acc} &bull; Bangladesh
-    </div>""", unsafe_allow_html=True)
+    st.markdown(
+        f'<div style="text-align:center;font-size:11px;color:#9baab8;padding:14px 0;'
+        f'border-top:1px solid #e8ecf4;margin-top:12px;">'
+        f'Mobile Financial System Analyzer · {pname} · Account: {acc} · Bangladesh</div>',
+        unsafe_allow_html=True
+    )
 
 if __name__ == "__main__":
     main_app()
