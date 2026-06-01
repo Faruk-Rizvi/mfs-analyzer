@@ -132,7 +132,7 @@ def detect_provider(raw, fname=''):
 
     for i,row in enumerate(raw[:12]):
         rlow = ' '.join(str(c) for c in row).lower()
-        if 'transaction id' in rlow and ('sender' in rlow or 'receiver' in rlow):
+        if ('transaction id' in rlow or 'trx id' in rlow) and ('sender' in rlow or 'receiver' in rlow):
             for dr in raw[i+1:i+6]:
                 txn = str(dr[1]).strip() if len(dr)>1 else ''
                 if re.match(r'^DC',txn,re.I): return 'bkash','bkash_business'
@@ -202,16 +202,19 @@ def parse_bkash_nagad_business(raw):
             m = re.match(r'^01[0-9]{9}$', str(c).strip())
             if m: acc = str(c).strip()
         rlow = ' '.join(str(c) for c in row).lower()
-        if 'transaction id' in rlow and ('sender' in rlow or 'transaction type' in rlow):
+        # Fix: also handle 'Trx Id' / 'Trx Type' (bKash Customer Statement format)
+        has_id   = 'transaction id' in rlow or 'trx id' in rlow
+        has_type = 'sender' in rlow or 'transaction type' in rlow or 'trx type' in rlow
+        if has_id and has_type:
             hi = i; break
     if hi < 0: hi = 4
 
     H = [str(h).replace('\n', ' ').strip().lower() for h in raw[hi]]
     def col(kw): return next((i for i, h in enumerate(H) if kw in h), -1)
 
-    iDt = col('transaction date'); iT  = col('transaction id')
-    iTy = col('transaction type'); iSn = col('sender')
-    iRv = col('receiver');         iA  = col('transacted amount')
+    iDt = col("transaction date") if col("transaction date") >= 0 else col("date") ; iT  = col("transaction id") if col("transaction id") >= 0 else col("trx id")
+    iTy = col("transaction type") if col("transaction type") >= 0 else col("trx type"); iSn = col("sender")
+    iRv = col('receiver');         iA  = col("transacted amount") if col("transacted amount") >= 0 else col("amount")
     iCm = col('commission');       iFe = col('fee')
     iBl = col('balance')
 
