@@ -563,6 +563,57 @@ def build_html(s, main, acc, provider, fmt, fname, focus_num=''):
              .sort_values('amt', ascending=False).head(8).reset_index()
     mo = main.groupby('মাস').agg(cnt=('পরিমাণ','count'), amt=('পরিমাণ','sum')).reset_index()
 
+    # ── Full type data for interactive filter (all types) ──
+    tp_full = main.groupby('ধরন').agg(
+        cnt=('পরিমাণ','count'),
+        amt=('পরিমাণ','sum'),
+        cr_cnt=('direction', lambda x: (x=='credit').sum()),
+        cr_amt=('পরিমাণ', lambda x: x[main.loc[x.index,'direction']=='credit'].sum()),
+        db_cnt=('direction', lambda x: (x=='debit').sum()),
+        db_amt=('পরিমাণ', lambda x: x[main.loc[x.index,'direction']=='debit'].sum()),
+        avg=('পরিমাণ','mean'),
+    ).sort_values('amt', ascending=False).reset_index()
+
+    # Build JS array of objects for filter section (with per-type counterpart list)
+    import json as _json
+
+    def _cp_rows(type_name):
+        """Return counterparts for a given transaction type."""
+        sub = main[main['ধরন'] == type_name]
+        cp_valid = sub[~sub['কাউন্টারপার্ট'].isin(['SYSTEM','','nan','None','NaN','নাই'])]
+        if cp_valid.empty:
+            return []
+        result = []
+        for cp_val, g in cp_valid.groupby('কাউন্টারপার্ট'):
+            cr = g[g['direction']=='credit']
+            db = g[g['direction']=='debit']
+            result.append({
+                'cp':     str(cp_val),
+                'cnt':    int(len(g)),
+                'amt':    round(float(g['পরিমাণ'].sum()), 2),
+                'cr_cnt': int(len(cr)),
+                'cr_amt': round(float(cr['পরিমাণ'].sum()), 2),
+                'db_cnt': int(len(db)),
+                'db_amt': round(float(db['পরিমাণ'].sum()), 2),
+            })
+        result.sort(key=lambda x: x['amt'], reverse=True)
+        return result
+
+    filter_data_js = 'const TXN_TYPES = ' + _json.dumps([
+        {
+            'type':   str(r['ধরন']),
+            'cnt':    int(r['cnt']),
+            'amt':    round(float(r['amt']), 2),
+            'cr_cnt': int(r['cr_cnt']),
+            'cr_amt': round(float(r['cr_amt']), 2),
+            'db_cnt': int(r['db_cnt']),
+            'db_amt': round(float(r['db_amt']), 2),
+            'avg':    round(float(r['avg']), 2),
+            'cps':    _cp_rows(str(r['ধরন'])),
+        }
+        for _, r in tp_full.iterrows()
+    ], ensure_ascii=False) + ';'
+
     # ── Chart.js data helpers ──
     def js_list(series):   return '[' + ','.join(f'"{v}"' for v in series) + ']'
     def js_nums(series):   return '[' + ','.join(f'{v:.2f}' for v in series) + ']'
@@ -832,6 +883,173 @@ body{{background:#f0f4f8;font-family:'Inter',sans-serif;font-size:14px;color:#1a
 
   {focus_html}
 
+  <!-- ═══════ TRANSACTION TYPE FILTER ═══════ -->
+  <div class="panel" id="txn-filter-panel">
+    <div class="sec-badge" style="background:{ac}18;border-color:{ac}44;color:{ac};">🔍 Transaction Type Filter</div>
+    <div class="pt">ট্রানজেকশন টাইপ সিলেক্ট করে বিস্তারিত দেখুন</div>
+
+    <!-- Search box + Reset -->
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+      <input id="typeSearch" type="text" placeholder="🔍 Type সার্চ করুন..."
+        oninput="filterButtons()"
+        style="flex:1;min-width:180px;padding:9px 14px;border:1.5px solid #dde3ed;border-radius:8px;
+               font-size:13px;font-family:'Inter',sans-serif;outline:none;color:#1a2332;">
+      <button onclick="resetFilter()"
+        style="padding:9px 18px;border:1.5px solid #dde3ed;border-radius:8px;background:#fff;
+               font-size:12px;font-weight:600;color:#6b7f99;cursor:pointer;">↺ Reset</button>
+      <button onclick="selectAll()"
+        style="padding:9px 18px;border:1.5px solid {ac};border-radius:8px;background:{ac}18;
+               font-size:12px;font-weight:600;color:{ac};cursor:pointer;">✓ সব Select</button>
+    </div>
+
+    <!-- Type buttons -->
+    <div id="typeBtnWrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;"></div>
+
+    <!-- Summary cards (shown when at least 1 type selected) -->
+    <div id="filterSummary" style="display:none;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+        <div style="background:#f0f4f8;border:1px solid #dde3ed;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;color:#6b7f99;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">মোট Txn</div>
+          <div id="fs_cnt" style="font-size:22px;font-weight:800;color:#1557a0;font-family:monospace;">0</div>
+        </div>
+        <div style="background:#f0faf6;border:1px solid #b3dcc8;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;color:#6b7f99;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Credit (In)</div>
+          <div id="fs_cr_amt" style="font-size:16px;font-weight:800;color:#00875a;font-family:monospace;">0</div>
+          <div id="fs_cr_cnt" style="font-size:11px;color:#6b7f99;">0 txns</div>
+        </div>
+        <div style="background:#fde8ec;border:1px solid #f5b8c4;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;color:#6b7f99;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Debit (Out)</div>
+          <div id="fs_db_amt" style="font-size:16px;font-weight:800;color:#c0392b;font-family:monospace;">0</div>
+          <div id="fs_db_cnt" style="font-size:11px;color:#6b7f99;">0 txns</div>
+        </div>
+        <div style="background:#fff8f0;border:1px solid #f5cdb0;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;color:#6b7f99;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">মোট পরিমাণ</div>
+          <div id="fs_amt" style="font-size:16px;font-weight:800;color:#b86e00;font-family:monospace;">0</div>
+        </div>
+        <div style="background:#f5f0ff;border:1px solid #c4b3f0;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;color:#6b7f99;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">গড় প্রতি Txn</div>
+          <div id="fs_avg" style="font-size:16px;font-weight:800;color:#7c3aed;font-family:monospace;">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Type summary table -->
+    <div id="filterTable" style="display:none;overflow-x:auto;margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+                  color:#6b7f99;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0f4f8;">
+        📋 Selected Type Summary
+      </div>
+      <table class="tbl" style="width:100%;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Transaction Type</th>
+            <th style="text-align:center;">মোট Txn</th>
+            <th style="text-align:right;">মোট পরিমাণ (BDT)</th>
+            <th style="text-align:center;">Credit Txn</th>
+            <th style="text-align:right;">Credit পরিমাণ</th>
+            <th style="text-align:center;">Debit Txn</th>
+            <th style="text-align:right;">Debit পরিমাণ</th>
+            <th style="text-align:right;">গড় পরিমাণ</th>
+          </tr>
+        </thead>
+        <tbody id="filterTbody"></tbody>
+        <tfoot id="filterTfoot"></tfoot>
+      </table>
+    </div>
+
+    <!-- Counterpart breakdown (shown when 1 type selected) -->
+    <div id="cpSection" style="display:none;margin-bottom:6px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+                  color:#6b7f99;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0f4f8;
+                  display:flex;align-items:center;justify-content:space-between;">
+        <span>👥 কার সাথে Transaction হয়েছে</span>
+        <span id="cpTypeLabel" style="font-size:11px;font-weight:600;color:{ac};text-transform:none;letter-spacing:0;"></span>
+      </div>
+
+      <!-- Credit counterparts -->
+      <div id="cpCreditWrap" style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;color:#00875a;margin-bottom:6px;">
+          ⬇ Credit — যারা টাকা পাঠিয়েছে (Received From)
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl" style="width:100%;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Account / Number</th>
+                <th style="text-align:center;">বার</th>
+                <th style="text-align:right;">মোট পরিমাণ (BDT)</th>
+                <th style="text-align:right;">গড়</th>
+              </tr>
+            </thead>
+            <tbody id="cpCreditTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Debit counterparts -->
+      <div id="cpDebitWrap" style="margin-bottom:6px;">
+        <div style="font-size:12px;font-weight:700;color:#c0392b;margin-bottom:6px;">
+          ⬆ Debit — যাদের টাকা পাঠানো হয়েছে (Sent To)
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl" style="width:100%;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Account / Number</th>
+                <th style="text-align:center;">বার</th>
+                <th style="text-align:right;">মোট পরিমাণ (BDT)</th>
+                <th style="text-align:right;">গড়</th>
+              </tr>
+            </thead>
+            <tbody id="cpDebitTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="cpNoData" style="display:none;padding:14px;color:#9baab8;font-size:12px;
+           border:1px dashed #e8ecf4;border-radius:8px;text-align:center;">
+        এই type-এ কোনো counterpart তথ্য নেই (System transaction)
+      </div>
+    </div>
+
+    <!-- Multi-type counterpart merged view -->
+    <div id="cpMultiSection" style="display:none;margin-bottom:6px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+                  color:#6b7f99;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0f4f8;">
+        👥 সব Selected Type মিলিয়ে — Counterpart Breakdown
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#00875a;margin-bottom:6px;">⬇ Received From (Credit)</div>
+          <div style="overflow-x:auto;">
+            <table class="tbl">
+              <thead><tr><th>#</th><th>Account</th><th style="text-align:center;">বার</th><th style="text-align:right;">পরিমাণ</th></tr></thead>
+              <tbody id="cpMultiCrTbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#c0392b;margin-bottom:6px;">⬆ Sent To (Debit)</div>
+          <div style="overflow-x:auto;">
+            <table class="tbl">
+              <thead><tr><th>#</th><th>Account</th><th style="text-align:center;">বার</th><th style="text-align:right;">পরিমাণ</th></tr></thead>
+              <tbody id="cpMultiDbTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Placeholder when nothing selected -->
+    <div id="filterPlaceholder"
+      style="text-align:center;padding:32px;color:#9baab8;font-size:13px;border:2px dashed #e8ecf4;border-radius:10px;">
+      ⬆ উপরের বাটন থেকে এক বা একাধিক Transaction Type সিলেক্ট করুন
+    </div>
+  </div>
+
 </div>
 
 <div class="footer">
@@ -978,6 +1196,244 @@ new Chart(document.getElementById('cSent'), {{
     }}
   }}
 }});
+
+// ══════════════════════════════════════════════
+//  TRANSACTION TYPE INTERACTIVE FILTER
+// ══════════════════════════════════════════════
+{filter_data_js}
+
+const ac = '{ac}';
+let selectedTypes = new Set();
+
+function fmt_bdt(n) {{
+  return 'BDT ' + parseFloat(n).toLocaleString('en-BD', {{minimumFractionDigits:2, maximumFractionDigits:2}});
+}}
+
+// Build type buttons
+function buildButtons() {{
+  const wrap = document.getElementById('typeBtnWrap');
+  wrap.innerHTML = '';
+  const q = document.getElementById('typeSearch').value.toLowerCase();
+  TXN_TYPES.forEach(t => {{
+    if (q && !t.type.toLowerCase().includes(q)) return;
+    const btn = document.createElement('button');
+    const isSelected = selectedTypes.has(t.type);
+    btn.textContent = t.type + '  (' + t.cnt + ')';
+    btn.dataset.type = t.type;
+    btn.onclick = () => toggleType(t.type);
+    btn.style.cssText = `
+      padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;
+      cursor:pointer;transition:all .15s ease;white-space:nowrap;
+      border:1.5px solid ${{isSelected ? ac : '#dde3ed'}};
+      background:${{isSelected ? ac : '#fff'}};
+      color:${{isSelected ? '#fff' : '#3a4a5c'}};
+      box-shadow:${{isSelected ? '0 2px 8px ' + ac + '44' : 'none'}};
+    `;
+    wrap.appendChild(btn);
+  }});
+}}
+
+function toggleType(type) {{
+  if (selectedTypes.has(type)) selectedTypes.delete(type);
+  else selectedTypes.add(type);
+  buildButtons();
+  renderTable();
+}}
+
+function filterButtons() {{ buildButtons(); }}
+
+function resetFilter() {{
+  selectedTypes.clear();
+  document.getElementById('typeSearch').value = '';
+  buildButtons();
+  renderTable();
+}}
+
+function selectAll() {{
+  const q = document.getElementById('typeSearch').value.toLowerCase();
+  TXN_TYPES.forEach(t => {{
+    if (!q || t.type.toLowerCase().includes(q)) selectedTypes.add(t.type);
+  }});
+  buildButtons();
+  renderTable();
+}}
+
+function renderTable() {{
+  const filtered = TXN_TYPES.filter(t => selectedTypes.has(t.type));
+  const tbl       = document.getElementById('filterTable');
+  const ph        = document.getElementById('filterPlaceholder');
+  const summ      = document.getElementById('filterSummary');
+  const tbody     = document.getElementById('filterTbody');
+  const tfoot     = document.getElementById('filterTfoot');
+  const cpSec     = document.getElementById('cpSection');
+  const cpMulti   = document.getElementById('cpMultiSection');
+
+  if (filtered.length === 0) {{
+    tbl.style.display     = 'none';
+    summ.style.display    = 'none';
+    cpSec.style.display   = 'none';
+    cpMulti.style.display = 'none';
+    ph.style.display      = 'block';
+    return;
+  }}
+
+  ph.style.display   = 'none';
+  tbl.style.display  = 'block';
+  summ.style.display = 'block';
+
+  // Aggregate totals
+  let tot_cnt=0, tot_amt=0, tot_cr_cnt=0, tot_cr_amt=0, tot_db_cnt=0, tot_db_amt=0;
+  filtered.forEach(t => {{
+    tot_cnt    += t.cnt;
+    tot_amt    += t.amt;
+    tot_cr_cnt += t.cr_cnt;
+    tot_cr_amt += t.cr_amt;
+    tot_db_cnt += t.db_cnt;
+    tot_db_amt += t.db_amt;
+  }});
+
+  // Summary cards
+  document.getElementById('fs_cnt').textContent    = tot_cnt.toLocaleString('en-BD');
+  document.getElementById('fs_amt').textContent    = fmt_bdt(tot_amt);
+  document.getElementById('fs_cr_amt').textContent = fmt_bdt(tot_cr_amt);
+  document.getElementById('fs_cr_cnt').textContent = tot_cr_cnt + ' txns';
+  document.getElementById('fs_db_amt').textContent = fmt_bdt(tot_db_amt);
+  document.getElementById('fs_db_cnt').textContent = tot_db_cnt + ' txns';
+  document.getElementById('fs_avg').textContent    = tot_cnt ? fmt_bdt(tot_amt / tot_cnt) : 'BDT 0';
+
+  // Type summary rows
+  tbody.innerHTML = filtered.map((t, i) => `
+    <tr>
+      <td style="color:#9baab8;text-align:center;">${{i+1}}</td>
+      <td style="font-weight:600;color:#1a2332;">${{t.type}}</td>
+      <td style="text-align:center;color:#1557a0;font-weight:700;">${{t.cnt.toLocaleString('en-BD')}}</td>
+      <td style="text-align:right;font-weight:700;color:#b86e00;">${{fmt_bdt(t.amt)}}</td>
+      <td style="text-align:center;color:#00875a;">${{t.cr_cnt}}</td>
+      <td style="text-align:right;color:#00875a;font-weight:600;">${{fmt_bdt(t.cr_amt)}}</td>
+      <td style="text-align:center;color:#c0392b;">${{t.db_cnt}}</td>
+      <td style="text-align:right;color:#c0392b;font-weight:600;">${{fmt_bdt(t.db_amt)}}</td>
+      <td style="text-align:right;color:#7c3aed;font-weight:600;">${{fmt_bdt(t.avg)}}</td>
+    </tr>
+  `).join('');
+
+  tfoot.innerHTML = `
+    <tr style="background:#f0f4f8;font-weight:800;font-size:12px;">
+      <td colspan="2" style="padding:10px 11px;color:#1a2332;">মোট (${{filtered.length}} type)</td>
+      <td style="text-align:center;color:#1557a0;">${{tot_cnt.toLocaleString('en-BD')}}</td>
+      <td style="text-align:right;color:#b86e00;">${{fmt_bdt(tot_amt)}}</td>
+      <td style="text-align:center;color:#00875a;">${{tot_cr_cnt}}</td>
+      <td style="text-align:right;color:#00875a;">${{fmt_bdt(tot_cr_amt)}}</td>
+      <td style="text-align:center;color:#c0392b;">${{tot_db_cnt}}</td>
+      <td style="text-align:right;color:#c0392b;">${{fmt_bdt(tot_db_amt)}}</td>
+      <td style="text-align:right;color:#7c3aed;">${{tot_cnt ? fmt_bdt(tot_amt/tot_cnt) : 'BDT 0'}}</td>
+    </tr>
+  `;
+
+  // ── COUNTERPART SECTION ──────────────────────────────────────────────
+  function cpRow(cp, i, clr) {{
+    const avg = cp.cnt ? (cp.amt / cp.cnt) : 0;
+    return `<tr>
+      <td style="color:#9baab8;text-align:center;">${{i+1}}</td>
+      <td style="font-family:monospace;font-weight:600;color:#1a2332;">${{cp.cp || '—'}}</td>
+      <td style="text-align:center;font-weight:700;color:${{clr}};">${{cp.cnt}}</td>
+      <td style="text-align:right;font-weight:700;color:${{clr}};">${{fmt_bdt(cp.amt)}}</td>
+      <td style="text-align:right;color:#6b7f99;">${{fmt_bdt(avg)}}</td>
+    </tr>`;
+  }}
+
+  if (filtered.length === 1) {{
+    // Single type → show separate credit/debit counterpart tables
+    cpMulti.style.display = 'none';
+    cpSec.style.display   = 'block';
+
+    const t = filtered[0];
+    document.getElementById('cpTypeLabel').textContent = '— ' + t.type;
+
+    const crCps = (t.cps || []).filter(c => c.cr_cnt > 0).sort((a,b) => b.cr_amt - a.cr_amt);
+    const dbCps = (t.cps || []).filter(c => c.db_cnt > 0).sort((a,b) => b.db_amt - a.db_amt);
+    const noData = document.getElementById('cpNoData');
+    const crWrap = document.getElementById('cpCreditWrap');
+    const dbWrap = document.getElementById('cpDebitWrap');
+
+    if (crCps.length === 0 && dbCps.length === 0) {{
+      noData.style.display  = 'block';
+      crWrap.style.display  = 'none';
+      dbWrap.style.display  = 'none';
+    }} else {{
+      noData.style.display = 'none';
+      // Credit table
+      if (crCps.length > 0) {{
+        crWrap.style.display = 'block';
+        document.getElementById('cpCreditTbody').innerHTML =
+          crCps.map((c, i) => `<tr>
+            <td style="color:#9baab8;text-align:center;">${{i+1}}</td>
+            <td style="font-family:monospace;font-weight:600;color:#1a2332;">${{c.cp}}</td>
+            <td style="text-align:center;font-weight:700;color:#00875a;">${{c.cr_cnt}}</td>
+            <td style="text-align:right;font-weight:700;color:#00875a;">${{fmt_bdt(c.cr_amt)}}</td>
+            <td style="text-align:right;color:#6b7f99;">${{c.cr_cnt ? fmt_bdt(c.cr_amt/c.cr_cnt) : '—'}}</td>
+          </tr>`).join('');
+      }} else {{ crWrap.style.display = 'none'; }}
+
+      // Debit table
+      if (dbCps.length > 0) {{
+        dbWrap.style.display = 'block';
+        document.getElementById('cpDebitTbody').innerHTML =
+          dbCps.map((c, i) => `<tr>
+            <td style="color:#9baab8;text-align:center;">${{i+1}}</td>
+            <td style="font-family:monospace;font-weight:600;color:#1a2332;">${{c.cp}}</td>
+            <td style="text-align:center;font-weight:700;color:#c0392b;">${{c.db_cnt}}</td>
+            <td style="text-align:right;font-weight:700;color:#c0392b;">${{fmt_bdt(c.db_amt)}}</td>
+            <td style="text-align:right;color:#6b7f99;">${{c.db_cnt ? fmt_bdt(c.db_amt/c.db_cnt) : '—'}}</td>
+          </tr>`).join('');
+      }} else {{ dbWrap.style.display = 'none'; }}
+    }}
+
+  }} else {{
+    // Multiple types → merge all counterparts
+    cpSec.style.display   = 'none';
+    cpMulti.style.display = 'block';
+
+    const crMap = {{}}, dbMap = {{}};
+    filtered.forEach(t => {{
+      (t.cps || []).forEach(c => {{
+        if (c.cr_cnt > 0) {{
+          if (!crMap[c.cp]) crMap[c.cp] = {{cp:c.cp, cnt:0, amt:0}};
+          crMap[c.cp].cnt += c.cr_cnt;
+          crMap[c.cp].amt += c.cr_amt;
+        }}
+        if (c.db_cnt > 0) {{
+          if (!dbMap[c.cp]) dbMap[c.cp] = {{cp:c.cp, cnt:0, amt:0}};
+          dbMap[c.cp].cnt += c.db_cnt;
+          dbMap[c.cp].amt += c.db_amt;
+        }}
+      }});
+    }});
+
+    const crList = Object.values(crMap).sort((a,b) => b.amt - a.amt);
+    const dbList = Object.values(dbMap).sort((a,b) => b.amt - a.amt);
+
+    document.getElementById('cpMultiCrTbody').innerHTML = crList.length
+      ? crList.map((c,i) => `<tr>
+          <td style="color:#9baab8;text-align:center;">${{i+1}}</td>
+          <td style="font-family:monospace;font-weight:600;">${{c.cp}}</td>
+          <td style="text-align:center;color:#00875a;font-weight:700;">${{c.cnt}}</td>
+          <td style="text-align:right;color:#00875a;font-weight:700;">${{fmt_bdt(c.amt)}}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:#9baab8;padding:10px;">কোনো data নেই</td></tr>';
+
+    document.getElementById('cpMultiDbTbody').innerHTML = dbList.length
+      ? dbList.map((c,i) => `<tr>
+          <td style="color:#9baab8;text-align:center;">${{i+1}}</td>
+          <td style="font-family:monospace;font-weight:600;">${{c.cp}}</td>
+          <td style="text-align:center;color:#c0392b;font-weight:700;">${{c.cnt}}</td>
+          <td style="text-align:right;color:#c0392b;font-weight:700;">${{fmt_bdt(c.amt)}}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:#9baab8;padding:10px;">কোনো data নেই</td></tr>';
+  }}
+}}
+
+// Init on load
+buildButtons();
 </script>
 </body>
 </html>"""
