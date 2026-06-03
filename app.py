@@ -2352,5 +2352,74 @@ def main_app():
         unsafe_allow_html=True
     )
 
+# ════════════════════════════════════════════════════════════════════════════
+#  AUTH — LOGIN GATE
+# ════════════════════════════════════════════════════════════════════════════
+import hashlib
+
+_VALID_USER = "Faruk13"
+_VALID_HASH = "514a1a327a10361a46a94a7e33295836c378961292128aa116e7788477d9d0e9"  # sha256("Nsi&2026")
+
+def _check(username, password):
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    return username == _VALID_USER and pw_hash == _VALID_HASH
+
+def login_page():
+    st.markdown("""
+    <style>
+    #MainMenu,footer,header{visibility:hidden;}
+    .stApp{background:linear-gradient(135deg,#1a0533 0%,#2d0a5e 45%,#7c3aed 80%,#e2136e 100%) !important;
+           min-height:100vh;}
+    </style>
+    """, unsafe_allow_html=True)
+
+    # center card
+    _, col, _ = st.columns([1, 1.4, 1])
+    with col:
+        st.markdown("<div style='height:60px'></div>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background:#fff;border-radius:18px;padding:40px 36px 32px;
+                    box-shadow:0 20px 60px rgba(0,0,0,.35);">
+          <div style="text-align:center;margin-bottom:28px;">
+            <div style="width:56px;height:56px;background:linear-gradient(135deg,#e2136e,#7c3aed);
+                        border-radius:14px;margin:0 auto 14px;display:flex;align-items:center;
+                        justify-content:center;font-size:26px;">💳</div>
+            <div style="font-size:20px;font-weight:800;color:#1a2332;">MFS Analyzer</div>
+            <div style="font-size:12px;color:#9baab8;margin-top:4px;">
+                Mobile Financial System · Bangladesh</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.form("login_form"):
+            username = st.text_input("👤 Username", placeholder="Username লিখুন")
+            password = st.text_input("🔒 Password", type="password", placeholder="Password লিখুন")
+            submitted = st.form_submit_button("🔐  Login", use_container_width=True)
+
+        if submitted:
+            if _check(username, password):
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("❌ Username বা Password ভুল হয়েছে।")
+
+        st.markdown("""
+        <div style="text-align:center;font-size:11px;color:#c8d0e0;margin-top:18px;">
+            🔒 Authorized Personnel Only
+        </div>""", unsafe_allow_html=True)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  ENTRY POINT
+# ════════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
-    main_app()
+    if not st.session_state.get("authenticated"):
+        login_page()
+    else:
+        # Logout button (sidebar)
+        with st.sidebar:
+            st.markdown(f"👤 **{_VALID_USER}**")
+            if st.button("🚪 Logout"):
+                st.session_state["authenticated"] = False
+                st.rerun()
+        main_app()
