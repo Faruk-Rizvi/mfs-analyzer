@@ -2717,13 +2717,12 @@ def login_page():
             username = st.text_input("👤 Username", placeholder="Username লিখুন")
             password = st.text_input("🔒 Password", type="password", placeholder="Password লিখুন")
             submitted = st.form_submit_button("🔐  Login", use_container_width=True)
-
-        if submitted:
-            if _check(username, password):
-                st.session_state["authenticated"] = True
-                st.rerun()
-            else:
-                st.error("❌ Username বা Password ভুল হয়েছে।")
+            if submitted:
+                if _check(username.strip(), password.strip()):
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Username বা Password ভুল হয়েছে।")
 
         st.markdown("""
         <div style="text-align:center;font-size:11px;color:#c8d0e0;margin-top:18px;">
