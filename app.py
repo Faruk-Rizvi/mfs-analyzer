@@ -116,7 +116,7 @@ def fmtn(n):
     try: return f"{int(n):,}"
     except: return "0"
 
-ACCENT = {'nagad':'#e85d04','bkash':'#e2136e','rocket':'#7c3aed','unknown':'#6b7f99'}
+ACCENT = {'nagad':'#e85d04','bkash':'#e2136e','rocket':'#7c3aed','dbbl':'#006b3c','unknown':'#6b7f99'}
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -127,8 +127,24 @@ def detect_provider(raw, fname=''):
     flat = ' '.join(str(c) for r in raw[:12] for c in r).lower()
     hdrs = ' '.join(str(c) for c in raw[0]).lower() if raw else ''
 
+    # Nagad standard CSV/Excel (internal format)
     if any(k in hdrs for k in ['txn_date_time','txn_type_dr_cr','available_blc_after_txn']):
         return 'nagad','nagad_standard'
+
+    # Nagad Account Statement Excel (web/app export) — row 0 says "NAGAD ACCOUNT STATEMENT"
+    if 'nagad account statement' in flat:
+        return 'nagad', 'nagad_account'
+
+    # bKash Customer Statement Excel:
+    # Row 0: SL | Transaction Date | Transaction Type | Sender | Receiver | Transacted Amount... | Balance...
+    if ('sl' in hdrs and 'transaction date' in hdrs and
+            'transaction type' in hdrs and 'sender' in hdrs and 'receiver' in hdrs):
+        return 'bkash','bkash_customer'
+
+    # DBBL Mobile Banking PDF (already parsed externally, raw from Excel won't hit here;
+    # but if somehow read as text, detect by keyword)
+    if 'dutch-bangla' in flat or 'mobile banking division' in flat or 'eod date' in hdrs:
+        return 'dbbl','dbbl_mobile'
 
     for i,row in enumerate(raw[:12]):
         rlow = ' '.join(str(c) for c in row).lower()
@@ -142,7 +158,7 @@ def detect_provider(raw, fname=''):
             if 'nagad' in flat or 'nagad' in fn: return 'nagad','nagad_business'
             return 'bkash','bkash_business'
 
-    if 'rocket' in flat or 'rocket' in fn or 'dbbl' in flat: return 'rocket','rocket'
+    if 'rocket' in flat or 'rocket' in fn: return 'rocket','rocket'
     if 'nagad'  in flat or 'nagad'  in fn: return 'nagad','nagad_standard'
     if 'bkash'  in flat or 'bkash'  in fn: return 'bkash','bkash_business'
     return 'unknown','unknown'
@@ -187,6 +203,92 @@ def parse_nagad_standard(raw):
             'কমিশন':0,
         })
     return acc,rows
+
+
+def parse_bkash_customer(raw):
+    """
+    Nagad Customer Statement Excel.
+    Columns: SL | Transaction Date | Transaction Type | Sender | Receiver
+             | Transacted Amount (in BDT) | Balance (in BDT)
+    Direction: Sender == account → Debit; Receiver == account → Credit
+    """
+    # header is row 0
+    H = [str(h).replace('\n',' ').strip().lower() for h in raw[0]]
+    def col(kw): return next((i for i,h in enumerate(H) if kw in h), -1)
+
+    iDt = col('transaction date')
+    iTy = col('transaction type')
+    iSn = col('sender')
+    iRv = col('receiver')
+    iA  = col('transacted amount')
+    iBl = col('balance')
+
+    # Detect account number — most frequent 11-digit number in sender/receiver
+    from collections import Counter
+    nums = Counter()
+    for row in raw[1:]:
+        for ci in [iSn, iRv]:
+            if ci >= 0:
+                v = re.sub(r'\s','', str(row[ci]).strip())
+                if re.match(r'^01[0-9]{9}$', v):
+                    nums[v] += 1
+    acc = nums.most_common(1)[0][0] if nums else ''
+
+    rows = []
+    for row in raw[1:]:
+        if not row or all(str(x).strip() in ('','nan','None') for x in row): continue
+        amt = _f(row[iA]) if iA >= 0 else 0
+        if amt == 0: continue
+
+        ty  = str(row[iTy]).strip() if iTy >= 0 else ''
+        sn  = re.sub(r'\s','', str(row[iSn]).strip()) if iSn >= 0 else ''
+        rv  = re.sub(r'\s','', str(row[iRv]).strip()) if iRv >= 0 else ''
+
+        # Direction
+        if sn == acc:
+            dr = 'debit';  cp = rv if rv not in ('','nan','None') else ''
+        elif rv == acc:
+            dr = 'credit'; cp = sn if sn not in ('','nan','None') else ''
+        else:
+            ty_l = ty.lower()
+            if any(k in ty_l for k in ['cash out','payment','topup','bill pay','send']):
+                dr, cp = 'debit', rv or sn
+            else:
+                dr, cp = 'credit', sn or rv
+
+        raw_dt = str(row[iDt]).strip() if iDt >= 0 else ''
+        try:
+            dt_obj = pd.to_datetime(raw_dt, errors='coerce', dayfirst=True)
+            if pd.isna(dt_obj):
+                date_s = raw_dt[:16]; day_s = ''; mon_s = ''; hour = -1
+            else:
+                date_s = dt_obj.strftime('%Y-%m-%d %H:%M')
+                day_s  = dt_obj.strftime('%Y-%m-%d')
+                mon_s  = dt_obj.strftime('%Y-%m')
+                hour   = dt_obj.hour
+        except:
+            date_s = raw_dt[:16]; day_s = ''; mon_s = ''; hour = -1
+
+        rows.append({
+            'তারিখ':          date_s,
+            'TXN_ID':          '',
+            'ধরন':             ty,
+            'direction':       dr,
+            'দিক':             'Credit (In)' if dr == 'credit' else 'Debit (Out)',
+            'পরিমাণ':          amt,
+            'ব্যালেন্স':       _f(row[iBl]) if iBl >= 0 else 0,
+            'চ্যানেল':         'USSD' if 'ussd' in ty.lower() else 'APP',
+            'কাউন্টারপার্ট':   cp,
+            'স্ট্যাটাস':      'APPROVED',
+            'is_comm':         False,
+            'আকার':            size_cat(amt),
+            'দিন':             day_s,
+            'মাস':             mon_s,
+            'hour':            hour,
+            'কমিশন':           0,
+        })
+    return acc, rows
+
 
 def parse_bkash_nagad_business(raw):
     """
@@ -291,9 +393,101 @@ def parse_bkash_nagad_business(raw):
     return acc, rows
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  ANALYSIS
-# ════════════════════════════════════════════════════════════════════════════
+def parse_nagad_account_statement(raw):
+    """
+    Nagad Account Statement Excel (web/app export).
+    Row 0: 'NAGAD ACCOUNT STATEMENT'
+    Rows 2-7: account info (Mobile Number in row 3)
+    Row 12: Sl | Txn Date | Txn Time | Txn ID | Txn Type | Txn With | Channel
+            | Reference | Dr/Cr | Amount (BDT) | Balance (BDT) | Status
+    Dr/Cr: CREDIT / DEBIT
+    """
+    acc = ''
+    for row in raw[:12]:
+        for i, c in enumerate(row):
+            if str(c).strip().lower() in ('mobile number:', 'mobile number'):
+                for j in range(i+1, len(row)):
+                    v = re.sub(r'\s', '', str(row[j]).strip())
+                    if re.match(r'^01[0-9]{9}$', v):
+                        acc = v; break
+
+    # Find header row
+    hi = 12
+    for i, row in enumerate(raw):
+        rlow = ' '.join(str(c) for c in row).lower()
+        if 'txn date' in rlow and 'dr/cr' in rlow:
+            hi = i; break
+
+    H = [str(h).strip().lower() for h in raw[hi]]
+    def col(kw): return next((i for i, h in enumerate(H) if kw in h), -1)
+
+    iDt  = col('txn date')
+    iTm  = col('txn time')
+    iID  = col('txn id')
+    iTy  = col('txn type')
+    iWith= col('txn with')
+    iCh  = col('channel')
+    iDC  = col('dr/cr')
+    iA   = col('amount')
+    iBl  = col('balance')
+    iSt  = col('status')
+
+    rows = []
+    for row in raw[hi+1:]:
+        if not row or all(str(x).strip() in ('','nan','None') for x in row): continue
+        try: int(str(row[0]).strip())
+        except: continue
+
+        amt = _f(row[iA]) if iA >= 0 else 0
+        if amt == 0: continue
+
+        ty  = str(row[iTy]).strip()  if iTy  >= 0 else ''
+        dc  = str(row[iDC]).strip().upper() if iDC >= 0 else ''
+        cp  = str(row[iWith]).strip() if iWith >= 0 else ''
+        ch  = str(row[iCh]).strip()  if iCh  >= 0 else ''
+        st  = str(row[iSt]).strip()  if iSt  >= 0 else ''
+
+        direction = 'credit' if dc == 'CREDIT' else 'debit'
+        is_fee    = 'SERVICE_FEE' in ty.upper()
+        is_comm   = 'REWARD' in ty.upper() or 'COMMISSION' in ty.upper()
+
+        dt_raw = str(row[iDt]).strip() if iDt >= 0 else ''
+        tm_raw = str(row[iTm]).strip() if iTm >= 0 else ''
+        dt_full = f"{dt_raw} {tm_raw}".strip()
+        try:
+            dt_obj = pd.to_datetime(dt_full, errors='coerce', dayfirst=True)
+            if pd.isna(dt_obj):
+                date_s = dt_raw[:16]; day_s = dt_raw[:10]; mon_s = ''; hour = -1
+            else:
+                date_s = dt_obj.strftime('%Y-%m-%d %H:%M')
+                day_s  = dt_obj.strftime('%Y-%m-%d')
+                mon_s  = dt_obj.strftime('%Y-%m')
+                hour   = dt_obj.hour
+        except:
+            date_s = dt_raw[:16]; day_s = ''; mon_s = ''; hour = -1
+
+        cp_clean = cp if cp not in ('SYSTEM','','nan','None') else ''
+
+        rows.append({
+            'তারিখ':          date_s,
+            'TXN_ID':          str(row[iID]).strip() if iID >= 0 else '',
+            'ধরন':             ty,
+            'direction':       direction,
+            'দিক':             'Credit (In)' if direction == 'credit' else 'Debit (Out)',
+            'পরিমাণ':          amt,
+            'ব্যালেন্স':       _f(row[iBl]) if iBl >= 0 else 0,
+            'চ্যানেল':         ch,
+            'কাউন্টারপার্ট':   cp_clean,
+            'স্ট্যাটাস':      st,
+            'is_comm':         is_comm,
+            'is_fee':          is_fee,
+            'আকার':            size_cat(amt),
+            'দিন':             day_s,
+            'মাস':             mon_s,
+            'hour':            hour,
+            'কমিশন':           0,
+        })
+    return acc, rows
 
 # ════════════════════════════════════════════════════════════════════════════
 #  ROCKET (DBBL) PDF PARSER
@@ -311,7 +505,109 @@ def detect_rocket_pdf(file_bytes):
         return False
 
 
-def parse_rocket_pdf(file_bytes):
+def parse_dbbl_mobile_pdf(file_bytes):
+    """
+    DBBL Mobile Banking Account Statement PDF.
+    Columns: EOD Date | Value Date | Txn ID | Br.Code | Txn Type | Ref A/C | Dr/Cr | Txn Amount | Running Balance
+    Dr/Cr: C = Credit, D = Debit
+    No SL column.
+    """
+    if not PDF_OK:
+        return "", []
+
+    import pdfplumber
+
+    account = ""
+    title   = ""
+    rows    = []
+    seen_ids = set()
+
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        for page_num, page in enumerate(pdf.pages):
+            # Extract account info from header text
+            if page_num == 0:
+                hdr = page.extract_text() or ""
+                m = re.search(r"Account No\.?\s*[:\.]?\s*(0\d{10,13})", hdr, re.I)
+                if m: account = m.group(1).strip()
+                mt = re.search(r"Account Title\s*[:\.]?\s*(.+)", hdr, re.I)
+                if mt: title = mt.group(1).strip().split("\n")[0]
+
+            tbl = page.extract_table()
+            if not tbl:
+                continue
+
+            for row in tbl:
+                if not row: continue
+                row = [str(c or "").replace("\n", " ").strip() for c in row]
+                if len(row) < 8: continue
+
+                # Skip header rows
+                first = row[0].upper()
+                if 'EOD' in first or 'DATE' in first: continue
+
+                # Skip Opening Balance
+                txn_type = row[4] if len(row) > 4 else ''
+                if 'OPENING BALANCE' in txn_type.upper(): continue
+
+                # Columns: [EOD Date, Value Date, Txn ID, Br.Code, Txn Type, Ref A/C, Dr/Cr, Txn Amount, Running Balance]
+                eod_date  = row[0]
+                val_date  = row[1]
+                txn_id    = row[2]
+                txn_type  = row[4]
+                ref_ac    = row[5]
+                dr_cr     = row[6].upper().strip()
+                amt_str   = row[7]
+                bal_str   = row[8] if len(row) > 8 else ''
+
+                amt = _f(amt_str)
+                if amt == 0: continue
+
+                # Skip duplicate transaction fees (same txn_id + D + small amount)
+                uid = f"{txn_id}_{dr_cr}_{amt_str}"
+                if uid in seen_ids: continue
+                seen_ids.add(uid)
+
+                direction = 'credit' if dr_cr == 'C' else 'debit'
+                is_fee    = 'TRANSACTION FEE' in txn_type.upper()
+                is_comm   = 'COMMISSION' in txn_type.upper()
+
+                # Parse date: "DD-MON-YYYY HH:MM:SS AM/PM"
+                dt_str = val_date or eod_date
+                try:
+                    dt_obj = pd.to_datetime(dt_str, errors='coerce', dayfirst=True)
+                    if pd.isna(dt_obj):
+                        date_s = dt_str[:16]; day_s = dt_str[:10]; mon_s = ''; hour = -1
+                    else:
+                        date_s = dt_obj.strftime('%Y-%m-%d %H:%M')
+                        day_s  = dt_obj.strftime('%Y-%m-%d')
+                        mon_s  = dt_obj.strftime('%Y-%m')
+                        hour   = dt_obj.hour
+                except:
+                    date_s = dt_str[:16]; day_s = ''; mon_s = ''; hour = -1
+
+                cp = ref_ac if re.match(r'^0\d{9,12}$', ref_ac) else ref_ac
+
+                rows.append({
+                    'তারিখ':          date_s,
+                    'TXN_ID':          txn_id,
+                    'ধরন':             txn_type,
+                    'direction':       direction,
+                    'দিক':             'Credit (In)' if direction == 'credit' else 'Debit (Out)',
+                    'পরিমাণ':          amt,
+                    'ব্যালেন্স':       _f(bal_str),
+                    'চ্যানেল':         'DBBL Mobile',
+                    'কাউন্টারপার্ট':   cp,
+                    'স্ট্যাটাস':      'APPROVED',
+                    'is_comm':         is_comm,
+                    'is_fee':          is_fee,
+                    'আকার':            size_cat(amt),
+                    'দিন':             day_s,
+                    'মাস':             mon_s,
+                    'hour':            hour,
+                    'কমিশন':           0,
+                })
+
+    return account, rows
     """
     Parse DBBL Rocket Mobile Banking PDF statement.
     
@@ -2141,12 +2437,27 @@ def main_app():
             if not PDF_OK:
                 st.error("pdfplumber not installed. Run: pip install pdfplumber")
                 return
-            if not detect_rocket_pdf(file_bytes):
-                st.error("This PDF does not appear to be a DBBL Rocket statement.")
+            # Detect PDF type
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(file_bytes)) as _pdf:
+                    _txt = (_pdf.pages[0].extract_text() or "").lower()
+            except:
+                _txt = ""
+
+            if "dutch-bangla" in _txt or "mobile banking division" in _txt:
+                # DBBL Mobile Banking Statement
+                with st.spinner("Extracting DBBL Mobile data..."):
+                    acc, rows = parse_dbbl_mobile_pdf(file_bytes)
+                provider, fmt = "dbbl", "dbbl_mobile"
+            elif "dutch-bangla" in _txt or "rocket" in _txt or "dbbl" in _txt:
+                # DBBL Rocket Agent PDF
+                with st.spinner("Extracting data from PDF..."):
+                    acc, rows = parse_rocket_pdf(file_bytes)
+                provider, fmt = "rocket", "rocket"
+            else:
+                st.error("এই PDF চেনা যাচ্ছে না। DBBL / Rocket statement upload করুন।")
                 return
-            with st.spinner("Extracting data from PDF..."):
-                acc, rows = parse_rocket_pdf(file_bytes)
-            provider, fmt = "rocket", "rocket"
         else:
             try:
                 import io as _io
@@ -2158,10 +2469,19 @@ def main_app():
                 return
             provider, fmt = detect_provider(raw, uploaded.name)
             if provider == "unknown":
-                st.error("Format not recognized. Upload a bKash, Nagad or Rocket statement.")
+                st.error("Format not recognized. bKash, Nagad বা Rocket statement upload করুন।")
                 return
+
             if fmt == "nagad_standard":
                 acc, rows = parse_nagad_standard(raw)
+            elif fmt == "bkash_customer":
+                acc, rows = parse_bkash_customer(raw)
+            elif fmt == "nagad_account":
+                acc, rows = parse_nagad_account_statement(raw)
+                provider = "nagad"
+            elif fmt == "dbbl_mobile":
+                st.error("DBBL Mobile statement PDF হিসেবে upload করুন।")
+                return
             else:
                 acc, rows = parse_bkash_nagad_business(raw)
                 if "nagad" in uploaded.name.lower():
@@ -2176,10 +2496,12 @@ def main_app():
             return
 
     ac     = ACCENT.get(provider, "#6b7f99")
-    pname  = {"nagad":"Nagad","bkash":"bKash","rocket":"Rocket (DBBL)"}.get(provider,"Unknown")
-    icon   = {"nagad":"🟠","bkash":"🔴","rocket":"🟣"}.get(provider,"❓")
-    fmt_lbl= {"nagad_standard":"Agent/Individual","nagad_business":"Business",
-               "bkash_business":"Business Agent","rocket":"Rocket Agent"}.get(fmt, fmt)
+    pname  = {"nagad":"Nagad","bkash":"bKash","rocket":"Rocket (DBBL)","dbbl":"DBBL Mobile Banking"}.get(provider,"Unknown")
+    icon   = {"nagad":"🟠","bkash":"🔴","rocket":"🟣","dbbl":"🟢"}.get(provider,"❓")
+    fmt_lbl= {"nagad_standard":"Agent/Individual","nagad_business":"Business","bkash_customer":"Customer Statement",
+               "nagad_account":"Account Statement",
+               "bkash_business":"Business Agent","rocket":"Rocket Agent",
+               "dbbl_mobile":"Mobile Banking Consumer"}.get(fmt, fmt)
 
     # ── PROVIDER BANNER ──
     st.markdown(
