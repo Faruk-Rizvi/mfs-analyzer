@@ -493,7 +493,114 @@ def parse_nagad_account_statement(raw):
 #  ROCKET (DBBL) PDF PARSER
 # ════════════════════════════════════════════════════════════════════════════
 def detect_rocket_pdf(file_bytes):
-    """Quick check: is this a DBBL Rocket PDF?"""
+    """Quick check: is this a DBBL PDF?"""
+    try:
+        import pdfplumber, io
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            text = (pdf.pages[0].extract_text() or "").lower()
+            return any(k in text for k in ["dutch-bangla","dbbl","mobile banking","rocket"])
+    except:
+        return False
+
+
+def parse_rocket_pdf(file_bytes):
+    """
+    DBBL Rocket Agent Statement PDF.
+    Columns: SL | Txn Date | Value Date | Txn ID | Br.Code | Txn Type | Ref A/C | Dr/Cr | Txn Amount | Running Balance
+    Dr/Cr: C = Credit, D = Debit
+    Has SL column (Agent type).
+    """
+    if not PDF_OK:
+        return "", []
+
+    import pdfplumber
+
+    account = ""
+    rows    = []
+    seen_ids = set()
+
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        for page_num, page in enumerate(pdf.pages):
+            if page_num == 0:
+                hdr = page.extract_text() or ""
+                m = re.search(r"Account No\.?\s*[:\.]?\s*(0\d{10,14})", hdr, re.I)
+                if m: account = m.group(1).strip()
+
+            tbl = page.extract_table()
+            if not tbl:
+                continue
+
+            for row in tbl:
+                if not row: continue
+                row = [str(c or "").replace("\n", " ").strip() for c in row]
+                if len(row) < 9: continue
+
+                # Skip header rows (SL column contains 'SL' or 'Txn Date')
+                if row[0].upper() in ('SL', 'TXN DATE', 'DATE'): continue
+                # Skip non-numeric SL (total summary lines)
+                try: int(row[0])
+                except: continue
+
+                # Columns: SL | Txn Date | Value Date | Txn ID | Br.Code | Txn Type | Ref A/C | Dr/Cr | Txn Amount | Running Balance
+                txn_date = row[1]
+                val_date = row[2]
+                txn_id   = row[3]
+                txn_type = row[5]
+                ref_ac   = row[6] if len(row) > 6 else ''
+                dr_cr    = row[7].upper().strip() if len(row) > 7 else ''
+                amt_str  = row[8] if len(row) > 8 else ''
+                bal_str  = row[9] if len(row) > 9 else ''
+
+                # Skip Opening Balance
+                if 'OPENING BALANCE' in txn_type.upper(): continue
+
+                amt = _f(amt_str)
+                if amt == 0: continue
+
+                uid = f"{txn_id}_{dr_cr}_{amt_str}"
+                if uid in seen_ids: continue
+                seen_ids.add(uid)
+
+                direction = 'credit' if dr_cr == 'C' else 'debit'
+                is_comm   = 'COMMISSION' in txn_type.upper()
+                is_fee    = 'FEE' in txn_type.upper() and not is_comm
+
+                dt_str = val_date or txn_date
+                try:
+                    dt_obj = pd.to_datetime(dt_str, errors='coerce', dayfirst=True)
+                    if pd.isna(dt_obj):
+                        date_s = dt_str[:16]; day_s = dt_str[:10]; mon_s = ''; hour = -1
+                    else:
+                        date_s = dt_obj.strftime('%Y-%m-%d %H:%M')
+                        day_s  = dt_obj.strftime('%Y-%m-%d')
+                        mon_s  = dt_obj.strftime('%Y-%m')
+                        hour   = dt_obj.hour
+                except:
+                    date_s = dt_str[:16]; day_s = ''; mon_s = ''; hour = -1
+
+                cp = ref_ac if re.match(r'^0\d{9,12}$', ref_ac) else ref_ac
+
+                rows.append({
+                    'তারিখ':          date_s,
+                    'TXN_ID':          txn_id,
+                    'ধরন':             txn_type,
+                    'direction':       direction,
+                    'দিক':             'Credit (In)' if direction == 'credit' else 'Debit (Out)',
+                    'পরিমাণ':          amt,
+                    'ব্যালেন্স':       _f(bal_str),
+                    'চ্যানেল':         'DBBL Agent',
+                    'কাউন্টারপার্ট':   cp,
+                    'স্ট্যাটাস':      'APPROVED',
+                    'is_comm':         is_comm,
+                    'is_fee':          is_fee,
+                    'আকার':            size_cat(amt),
+                    'দিন':             day_s,
+                    'মাস':             mon_s,
+                    'hour':            hour,
+                    'কমিশন':           0,
+                })
+
+    return account, rows
     if not PDF_OK:
         return False
     try:
@@ -2445,16 +2552,17 @@ def main_app():
             except:
                 _txt = ""
 
-            if "dutch-bangla" in _txt or "mobile banking division" in _txt:
-                # DBBL Mobile Banking Statement
-                with st.spinner("Extracting DBBL Mobile data..."):
-                    acc, rows = parse_dbbl_mobile_pdf(file_bytes)
-                provider, fmt = "dbbl", "dbbl_mobile"
-            elif "dutch-bangla" in _txt or "rocket" in _txt or "dbbl" in _txt:
-                # DBBL Rocket Agent PDF
-                with st.spinner("Extracting data from PDF..."):
-                    acc, rows = parse_rocket_pdf(file_bytes)
-                provider, fmt = "rocket", "rocket"
+            if "dutch-bangla" in _txt or "mobile banking division" in _txt or "dbbl" in _txt or "rocket" in _txt:
+                # Check Customer Type to distinguish Agent vs Consumer
+                is_agent = "customer type: agent" in _txt.lower() or "customer type:agent" in _txt.lower()
+                if is_agent:
+                    with st.spinner("Extracting DBBL Rocket Agent data..."):
+                        acc, rows = parse_rocket_pdf(file_bytes)
+                    provider, fmt = "rocket", "rocket"
+                else:
+                    with st.spinner("Extracting DBBL Mobile data..."):
+                        acc, rows = parse_dbbl_mobile_pdf(file_bytes)
+                    provider, fmt = "dbbl", "dbbl_mobile"
             else:
                 st.error("এই PDF চেনা যাচ্ছে না। DBBL / Rocket statement upload করুন।")
                 return
