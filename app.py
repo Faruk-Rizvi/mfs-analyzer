@@ -136,10 +136,13 @@ def detect_provider(raw, fname=''):
         return 'nagad', 'nagad_account'
 
     # bKash Customer Statement Excel:
-    # Row 0: SL | Transaction Date | Transaction Type | Sender | Receiver | Transacted Amount... | Balance...
-    if ('sl' in hdrs and 'transaction date' in hdrs and
-            'transaction type' in hdrs and 'sender' in hdrs and 'receiver' in hdrs):
-        return 'bkash','bkash_customer'
+    # Header row may be row 0 OR below preamble rows (Account No, Date ইত্যাদি)।
+    # তাই প্রথম ১০টা রো স্ক্যান করে header খুঁজি — শুধু raw[0] নয়।
+    for _r in raw[:10]:
+        _h = ' '.join(str(c).replace('\n',' ') for c in _r).lower()
+        if ('transaction date' in _h and 'transaction type' in _h
+                and 'sender' in _h and 'receiver' in _h):
+            return 'bkash','bkash_customer'
 
     # DBBL Mobile Banking PDF (already parsed externally, raw from Excel won't hit here;
     # but if somehow read as text, detect by keyword)
@@ -212,8 +215,15 @@ def parse_bkash_customer(raw):
              | Transacted Amount (in BDT) | Balance (in BDT)
     Direction: Sender == account → Debit; Receiver == account → Credit
     """
-    # header is row 0
-    H = [str(h).replace('\n',' ').strip().lower() for h in raw[0]]
+    # header row খুঁজি — preamble রো (Account No, Date) থাকতে পারে, তাই raw[0] নিশ্চিত নয়
+    _hidx = 0
+    for _i, _r in enumerate(raw[:10]):
+        _hl = ' '.join(str(c).replace('\n',' ') for c in _r).lower()
+        if ('transaction date' in _hl and 'transaction type' in _hl
+                and 'sender' in _hl and 'receiver' in _hl):
+            _hidx = _i; break
+    H = [str(h).replace('\n',' ').strip().lower() for h in raw[_hidx]]
+    raw = raw[_hidx:]  # header থেকে শুরু করে বাকি ডেটা
     def col(kw): return next((i for i,h in enumerate(H) if kw in h), -1)
 
     iDt = col('transaction date')
@@ -251,7 +261,8 @@ def parse_bkash_customer(raw):
             dr = 'credit'; cp = sn if sn not in ('','nan','None') else ''
         else:
             ty_l = ty.lower()
-            if any(k in ty_l for k in ['cash out','payment','topup','bill pay','send']):
+            if any(k in ty_l for k in ['cash out','payment','topup','bill pay','send',
+                                        'checkout','merchant','purchase','repayment']):
                 dr, cp = 'debit', rv or sn
             else:
                 dr, cp = 'credit', sn or rv
