@@ -132,21 +132,25 @@ def parse_bkash_nagad_business(path):
         if 'transaction id' in rlow and ('sender' in rlow or 'receiver' in rlow):
             hi = i; break
 
-    # Extract account number
-    acc = ''
-    for row in raw[:12]:
-        for c in row:
-            if re.match(r'^01[0-9]{9}$', str(c).strip()): acc = str(c).strip(); break
-        if acc: break
-
-    acc_clean = re.sub(r'\s', '', acc)
-
     headers = [str(h).replace('\n', ' ').strip().lower() for h in raw[hi]]
     def col(kw): return next((i for i, h in enumerate(headers) if kw in h), -1)
 
     iD  = col('transaction date');  iT  = col('transaction id')
     iTy = col('transaction type');  iSn = col('sender')
     iRv = col('receiver');          iAm = col('transacted amount')
+
+    # Account number = sender/receiver কলামে সবচেয়ে ঘনঘন আসা 11-সংখ্যার নম্বর।
+    # (header-এ account নম্বর 10-সংখ্যার হতে পারে — leading 0 ছাড়া — তাই data থেকেই নিই,
+    #  আর "প্রথম যেটা পাই" নিলে ভুল করে একটা counterpart ধরে ফেলে।)
+    from collections import Counter as _Ctr
+    _nums = _Ctr()
+    for row in raw[hi+1:]:
+        for ci in (iSn, iRv):
+            if ci >= 0:
+                v = re.sub(r'\s', '', str(row[ci]).strip())
+                if re.match(r'^01[0-9]{9}$', v): _nums[v] += 1
+    acc = _nums.most_common(1)[0][0] if _nums else ''
+    acc_clean = re.sub(r'\s', '', acc)
     iCm = col('commission');        iFe = col('fee')
     iBl = col('balance')
 
@@ -171,7 +175,8 @@ def parse_bkash_nagad_business(path):
             # Fallback: type keyword heuristic
             ty_low = ty.lower()
             if any(k in ty_low for k in ['cash out', 'payment', 'topup', 'bill pay',
-                                          'loan repay', 'subscribe', 'direct pay']):
+                                          'loan repay', 'subscribe', 'direct pay',
+                                          'checkout', 'merchant', 'purchase', 'send']):
                 dr, cp = 'debit', rv or sn
             else:
                 dr, cp = 'credit', sn or rv
